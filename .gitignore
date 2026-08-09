@@ -1,0 +1,31 @@
+# dependencies
+node_modules/
+
+# builds
+.turbo/
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# env & secrets
+.env
+.env.local
+.env.*.local
+.netrc
+
+# logs & caches
+*.log
+.DS_Store
+.npm/
+.eslintcache
+.pnpm-store/
+
+# editors
+.idea/
+.vscode/
+*.swp
+
+# misc
+.monkeycode-tmp-files/

@@ -1,0 +1,21 @@
+{
+  "name": "@aether/ui",
+  "version": "0.0.1",
+  "description": "Aether design system: Yohaku tokens, AI-readable contract, and HTML mockup templates.",
+  "type": "module",
+  "exports": {
+    "./tokens.css": "./src/tokens.css",
+    "./tokens": "./src/tokens.ts"
+  },
+  "files": [
+    "src",
+    "templates"
+  ],
+  "scripts": {
+    "check": "tsx scripts/check.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.11",
+    "typescript": "^6.0.0"
+  }
+}
