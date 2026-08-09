@@ -15,11 +15,11 @@ export function extractTokens(css: string): Map<string, string> {
   const result = new Map<string, string>()
   const re = /(--color-[\da-z-]+|--font-[\da-z-]+):\s*([^;]+);/g
   for (const match of css.matchAll(re)) {
-    const name = match[1]
-    const value = match[2].trim()
+    const name = match[1]!
+    const value = match[2]!.trim()
     const hex = value.match(HEX_RE)
     if (hex) {
-      result.set(name, hex[0].toLowerCase())
+      result.set(name, hex[0]!.toLowerCase())
     } else {
       result.set(name, value)
     }
@@ -36,9 +36,9 @@ export function extractCheatsheetHex(md: string): Map<string, string> {
     let hexValue: string | undefined
     for (const cell of trimmed.split('|').map((c) => c.trim())) {
       const varMatch = cell.match(/`(--[\da-z-]+)`/)
-      if (varMatch) varName = varMatch[1]
+      if (varMatch) varName = varMatch[1]!
       const hexMatch = cell.match(/`(#[\da-f]{3,8})`/i)
-      if (hexMatch) hexValue = hexMatch[1].toLowerCase()
+      if (hexMatch) hexValue = hexMatch[1]!.toLowerCase()
     }
     if (varName && hexValue) result.set(varName, hexValue)
   }

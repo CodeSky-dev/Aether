@@ -1,0 +1,23 @@
+{
+  "name": "aether",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Aether 协同智能介质 monorepo：Turborepo + pnpm + Next.js 16 + Vite 8",
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "check": "turbo run check"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "typescript": "^6.0.0"
+  },
+  "packageManagerNote": "使用 pnpm 11；Node >= 22。包命名一律 @aether scope。"
+}

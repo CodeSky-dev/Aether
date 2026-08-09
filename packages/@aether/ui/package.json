@@ -12,9 +12,11 @@
     "templates"
   ],
   "scripts": {
-    "check": "tsx scripts/check.ts"
+    "check": "tsx scripts/check.ts",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@types/node": "^26.2.0",
     "tsx": "^4.23.11",
     "typescript": "^6.0.0"
   }

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "globalEnv": ["NODE_ENV", "NEXT_PUBLIC_*", "TURBO_TOKEN", "TURBO_TEAM"],
+  "globalPassThroughEnv": ["CI", "VERCEL", "VERCEL_ENV", "VERCEL_GIT_COMMIT_SHA"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**", "out/**"],
+      "env": ["TAILWIND_VERSION", "AETHER_CONFIG_HASH"]
+    },
+    "check": {
+      "dependsOn": [],
+      "outputs": []
+    },
+    "lint": {
+      "dependsOn": [],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}
