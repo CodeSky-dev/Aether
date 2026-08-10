@@ -36,6 +36,21 @@ importers:
         specifier: ^8.66.0
         version: 8.66.0(eslint@9.39.5(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
 
+  packages/@aether/types:
+    devDependencies:
+      '@aether/config':
+        specifier: workspace:*
+        version: link:../config
+      '@types/node':
+        specifier: ^26.2.0
+        version: 26.2.0
+      eslint:
+        specifier: ^9.39.5
+        version: 9.39.5(jiti@2.7.0)(supports-color@7.2.0)
+      typescript:
+        specifier: ^6.0.0
+        version: 6.0.3
+
   packages/@aether/ui:
     devDependencies:
       '@aether/config':
