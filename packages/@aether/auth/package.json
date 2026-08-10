@@ -1,0 +1,29 @@
+{
+  "name": "@aether/auth",
+  "version": "0.0.1",
+  "description": "Aether 认证与授权适配层：Better-Auth 三级 Realm Tree 权限模型封装。下游禁止直接依赖 Better-Auth。",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./permissions": "./src/permissions.ts",
+    "./instance": "./src/instance.ts",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@aether/db": "workspace:*",
+    "@aether/types": "workspace:*",
+    "better-auth": "^1.6.26",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@aether/config": "workspace:*",
+    "@types/node": "^26.2.0",
+    "eslint": "^9.39.5",
+    "typescript": "^6.0.0"
+  }
+}
