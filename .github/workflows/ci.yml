@@ -30,5 +30,8 @@ jobs:
       - name: Verify Yohaku tokens (tokens.css ↔ yohaku.md ↔ templates)
         run: pnpm --filter @aether/ui check
 
+      - name: Lint
+        run: pnpm lint
+
       - name: Typecheck
         run: pnpm typecheck

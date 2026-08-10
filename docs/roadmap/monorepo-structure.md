@@ -46,7 +46,7 @@ aether/
 | `@aether/ui` | 组件库、设计令牌、术语命名规范 | `@aether/types` | Vite 8 库模式 |
 | `@aether/state` | Zustand store、Yjs 双向绑定、乐观更新 | `@aether/current-sync`、`@aether/types` | Vite 8 库模式 |
 | `@aether/types` | 共享类型、Yjs schema 类型生成与校验 | 无 | tsc |
-| `@aether/config` | TS7 / ESLint / Tailwind 共享配置 | 无 | 纯配置 |
+| `@aether/config` | TS7 / ESLint / Tailwind 共享配置 | 无（对外运行时零依赖；内部自带 eslint/tailwind 工具依赖） | 纯配置 |
 | `@aether/observability` | 日志、遥测、遥测采集 SDK | `@aether/types` | tsc |
 
 ## 架构规则

@@ -13,10 +13,13 @@
   ],
   "scripts": {
     "check": "tsx scripts/check.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
   },
   "devDependencies": {
+    "@aether/config": "workspace:*",
     "@types/node": "^26.2.0",
+    "eslint": "^9.39.5",
     "tsx": "^4.23.11",
     "typescript": "^6.0.0"
   }

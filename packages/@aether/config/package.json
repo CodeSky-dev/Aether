@@ -1,0 +1,26 @@
+{
+  "name": "@aether/config",
+  "version": "0.0.1",
+  "description": "Aether 共享工程配置：TS7 Strict tsconfig、ESLint flat config（Yohaku 约束）、Tailwind v4 集成。纯配置包。",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tsconfig/base.json": "./tsconfig/base.json",
+    "./tsconfig/node.json": "./tsconfig/node.json",
+    "./tsconfig/vite.json": "./tsconfig/vite.json",
+    "./tsconfig/next.json": "./tsconfig/next.json",
+    "./eslint/base": "./eslint/base.mjs",
+    "./eslint/tailwind": "./eslint/tailwind.mjs",
+    "./tailwind/content": "./tailwind/content.mjs",
+    "./tailwind/vite": "./tailwind/vite.mjs",
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@eslint/js": "^9.39.5",
+    "@tailwindcss/vite": "^4.3.3",
+    "eslint": "^9.39.5",
+    "globals": "^17.9.0",
+    "tailwindcss": "^4.3.3",
+    "typescript-eslint": "^8.66.0"
+  }
+}

@@ -19,7 +19,7 @@ export function extractTokens(css: string): Map<string, string> {
     const value = match[2]!.trim()
     const hex = value.match(HEX_RE)
     if (hex) {
-      result.set(name, hex[0]!.toLowerCase())
+      result.set(name, hex[0].toLowerCase())
     } else {
       result.set(name, value)
     }
