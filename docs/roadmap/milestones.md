@@ -25,7 +25,7 @@ graph LR
 
 - [x] `@aether/config`：TS7 Strict、ESLint/Biome、Tailwind v4 共享配置
 - [x] `@aether/types`：共享类型与 schema 类型生成
-- [ ] `@aether/db`：核心 schema + Drizzle Kit 迁移脚本
+- [x] `@aether/db`：核心 schema + Drizzle Kit 迁移脚本
 - [ ] `@aether/auth`：Better-Auth 三级模型（Realm > Project > Member）
 - [ ] `@aether/editor-host`：Yjs Provider 基线 + Presence 通道
 - [ ] CI 管线：build / lint / test / typecheck，remote cache 打通
