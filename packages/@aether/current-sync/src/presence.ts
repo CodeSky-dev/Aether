@@ -1,10 +1,11 @@
 // @aether/current-sync · Presence 通道。
 import type { PresenceSnapshot } from '@aether/types'
+import * as decoding from 'lib0/decoding'
+import * as encoding from 'lib0/encoding'
 import {
   applyAwarenessUpdate,
   Awareness,
   encodeAwarenessUpdate,
-  modifyAwarenessUpdate,
   removeAwarenessStates,
 } from 'y-protocols/awareness'
 import type * as Y from 'yjs'
@@ -26,7 +27,7 @@ export class PresenceChannel {
   private readonly now: () => number
   private readonly listeners = new Set<PresenceChangeListener>()
   private readonly sweepTimer: ReturnType<typeof setInterval>
-  private readonly knownSequences = new Map<string, number>()
+  private readonly knownSequences = new Map<number, number>()
   private localSequence = 0
   private localPresence: Pick<
     PresenceSnapshot,
@@ -59,7 +60,7 @@ export class PresenceChannel {
   ): void {
     this.localPresence = presence
     this.localSequence += 1
-    this.knownSequences.set(this.actorId, this.localSequence)
+    this.knownSequences.set(this.awareness.clientID, this.localSequence)
     this.awareness.setLocalState({
       actorId: this.actorId,
       cursor: presence.cursor,
@@ -89,8 +90,12 @@ export class PresenceChannel {
   }
 
   public applyUpdate(update: Uint8Array, origin: symbol): void {
-    const filteredUpdate = modifyAwarenessUpdate(update, (state) => {
+    const filteredUpdate = modifyAwarenessUpdateByClientId(update, (state, clientId) => {
       const rawState: unknown = state
+      if (rawState === null) {
+        this.knownSequences.delete(clientId)
+        return null
+      }
       if (!rawState || typeof rawState !== 'object') {
         return rawState
       }
@@ -101,17 +106,17 @@ export class PresenceChannel {
       ) {
         return rawState
       }
-      const knownSequence = this.knownSequences.get(value.actorId)
+      const knownSequence = this.knownSequences.get(clientId)
       if (
         knownSequence === undefined ||
         value.sequence > knownSequence
       ) {
         return rawState
       }
-      return this.findStateByActorId(value.actorId)
+      return this.findStateByClientId(clientId)
     })
     applyAwarenessUpdate(this.awareness, filteredUpdate, origin)
-    for (const state of this.awareness.getStates().values()) {
+    for (const [clientId, state] of this.awareness.getStates()) {
       if (
         state &&
         typeof state === 'object' &&
@@ -119,9 +124,9 @@ export class PresenceChannel {
         typeof state.sequence === 'number'
       ) {
         this.knownSequences.set(
-          state.actorId,
+          clientId,
           Math.max(
-            this.knownSequences.get(state.actorId) ?? 0,
+            this.knownSequences.get(clientId) ?? 0,
             state.sequence,
           ),
         )
@@ -147,9 +152,11 @@ export class PresenceChannel {
     const expiredClientIds = Array.from(this.awareness.getStates()).flatMap(
       ([clientId, state]) => {
         const snapshot = this.toSnapshot(state)
-        return snapshot && this.now() - snapshot.lastSeenAt > this.timeoutMs
-          ? [clientId]
-          : []
+        if (snapshot && this.now() - snapshot.lastSeenAt > this.timeoutMs) {
+          this.knownSequences.delete(clientId)
+          return [clientId]
+        }
+        return []
       },
     )
     if (expiredClientIds.length > 0) {
@@ -199,16 +206,27 @@ export class PresenceChannel {
     }
   }
 
-  private findStateByActorId(actorId: string): unknown {
-    for (const state of this.awareness.getStates().values()) {
-      if (
-        state &&
-        typeof state === 'object' &&
-        (state as Partial<PresenceSnapshot>).actorId === actorId
-      ) {
-        return state
-      }
-    }
-    return null
+  private findStateByClientId(clientId: number): unknown {
+    return this.awareness.getStates().get(clientId) ?? null
   }
+}
+
+function modifyAwarenessUpdateByClientId(
+  update: Uint8Array,
+  modify: (state: unknown, clientId: number) => unknown,
+): Uint8Array {
+  const decoder = decoding.createDecoder(update)
+  const encoder = encoding.createEncoder()
+  const length = decoding.readVarUint(decoder)
+  encoding.writeVarUint(encoder, length)
+  for (let index = 0; index < length; index += 1) {
+    const clientId = decoding.readVarUint(decoder)
+    const clock = decoding.readVarUint(decoder)
+    const state = JSON.parse(decoding.readVarString(decoder)) as unknown
+    const modifiedState = modify(state, clientId)
+    encoding.writeVarUint(encoder, clientId)
+    encoding.writeVarUint(encoder, clock)
+    encoding.writeVarString(encoder, JSON.stringify(modifiedState))
+  }
+  return encoding.toUint8Array(encoder)
 }

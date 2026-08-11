@@ -462,6 +462,120 @@ describe('@aether/current-sync', () => {
     receiver.destroy()
   })
 
+  it('同一 actor 的新会话序号从一开始时仍能恢复 Presence', () => {
+    const receiver = new YjsProvider({
+      actorId: 'receiver',
+      transport: createLoopbackTransportPair()[0],
+    })
+    const firstSession = new YjsProvider({
+      actorId: 'shared-actor',
+      transport: createLoopbackTransportPair()[0],
+    })
+    firstSession.setLocalPresence({
+      cursor: { file: 'a.ts', offset: 1 },
+      selection: null,
+    })
+    receiver.presence.applyUpdate(
+      firstSession.presence.encodeUpdate(),
+      Symbol('test'),
+    )
+    firstSession.presence.clearLocalPresence()
+    receiver.presence.applyUpdate(
+      firstSession.presence.encodeUpdate([firstSession.presence.getLocalClientId()]),
+      Symbol('test'),
+    )
+    expect(receiver.presence.getSnapshots()).toEqual([])
+
+    const newSession = new YjsProvider({
+      actorId: 'shared-actor',
+      transport: createLoopbackTransportPair()[0],
+    })
+    newSession.setLocalPresence({
+      cursor: { file: 'a.ts', offset: 2 },
+      selection: null,
+    })
+    receiver.presence.applyUpdate(
+      newSession.presence.encodeUpdate(),
+      Symbol('test'),
+    )
+    expect(receiver.presence.getSnapshots()).toHaveLength(1)
+    expect(receiver.presence.getSnapshots()[0]?.cursor?.offset).toBe(2)
+    expect(receiver.presence.getSnapshots()[0]?.sequence).toBe(1)
+
+    firstSession.destroy()
+    newSession.destroy()
+    receiver.destroy()
+  })
+
+  it('同一 actor 的并发 client 各自保留独立 Presence', () => {
+    const receiver = new YjsProvider({
+      actorId: 'receiver',
+      transport: createLoopbackTransportPair()[0],
+    })
+    const firstClient = new YjsProvider({
+      actorId: 'shared-actor',
+      transport: createLoopbackTransportPair()[0],
+    })
+    const secondClient = new YjsProvider({
+      actorId: 'shared-actor',
+      transport: createLoopbackTransportPair()[0],
+    })
+    firstClient.setLocalPresence({
+      cursor: { file: 'a.ts', offset: 1 },
+      selection: null,
+    })
+    secondClient.setLocalPresence({
+      cursor: { file: 'a.ts', offset: 2 },
+      selection: null,
+    })
+    receiver.presence.applyUpdate(firstClient.presence.encodeUpdate(), Symbol('test'))
+    receiver.presence.applyUpdate(secondClient.presence.encodeUpdate(), Symbol('test'))
+
+    expect(
+      receiver.presence
+        .getSnapshots()
+        .map((snapshot) => snapshot.cursor?.offset)
+        .sort(),
+    ).toEqual([1, 2])
+
+    firstClient.destroy()
+    secondClient.destroy()
+    receiver.destroy()
+  })
+
+  it('持续高频移动时每个节流窗口只广播一条 Presence', async () => {
+    vi.useFakeTimers()
+    const [rawFirst, rawSecond] = createLoopbackTransportPair()
+    const firstTransport = recordMessages(rawFirst)
+    const secondTransport = recordMessages(rawSecond)
+    const first = new YjsProvider({
+      actorId: 'first',
+      transport: firstTransport.transport,
+      presenceThrottleMs: 50,
+    })
+    const second = new YjsProvider({
+      actorId: 'second',
+      transport: secondTransport.transport,
+      presenceThrottleMs: 50,
+    })
+    await Promise.all([first.connect(), second.connect()])
+
+    for (let offset = 0; offset < 10; offset += 1) {
+      first.setLocalPresence({
+        cursor: { file: 'a.ts', offset },
+        selection: null,
+      })
+      vi.advanceTimersByTime(10)
+    }
+    const presenceMessages = (): ProviderMessage[] =>
+      firstTransport.messages.filter((message) => message.kind === 'presence')
+    expect(presenceMessages()).toHaveLength(3)
+    expect(second.presence.getSnapshots()[0]?.cursor?.offset).toBe(9)
+
+    first.destroy()
+    second.destroy()
+  })
+
   it('未连接时不广播也不堆积 Presence，连接后只重播最新意图', async () => {
     vi.useFakeTimers()
     const [rawFirst, rawSecond] = createLoopbackTransportPair()
