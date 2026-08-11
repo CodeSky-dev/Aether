@@ -1,42 +1,60 @@
 ```
-# Logs and temp files
-*.log
-*.tmp
-*.swp
+# Turborepo cache
+.turbo/
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+tsconfig.build.json
 
 # Environment
 .env
 .env.local
-.env.*
+*.env.*
 
-# Editors
-.vscode/
-.idea/
+# Logs
+*.log
 
-# Dependencies
-node_modules/
-.venv/
-venv/
-__pycache__/
-.mypy_cache/
-.pytest_cache/
-dist/
-build/
-target/
-.gradle/
+# Temporary files
+*.tmp
+*.temp
 
-# Compiled files
-*.pyc
-*.class
-*.o
-*.obj
-*.exe
-*.dll
-*.so
-*.a
-*.out
-
-# System files
+# OS generated files
 .DS_Store
 Thumbs.db
+
+# Editor specific
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage
+coverage/
+.nyc_output/
+istanbul-reports/
+
+# Testing
+.jest/
+jest/
+mocha.opts
+
+# TypeScript
+*.tsbuildinfo
 ```
