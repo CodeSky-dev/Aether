@@ -5,7 +5,11 @@ import {
   createDoc,
   destroyDoc,
   getPartition,
+  readPartitionField,
+  readPartitionFieldCommittedAt,
   readPartitionText,
+  writePartitionField,
+  writePartitionFieldCommittedAt,
 } from './yjs-adapter.js'
 import type * as Y from 'yjs'
 
@@ -27,6 +31,24 @@ export interface RealmChannel extends RealmChannelRef {
     key: T,
     field: string,
   ): string
+  readField<T extends YDocPartitionKey>(
+    key: T,
+    field: string,
+  ): unknown
+  writeField<T extends YDocPartitionKey>(
+    key: T,
+    field: string,
+    value: unknown,
+  ): void
+  readFieldCommittedAt<T extends YDocPartitionKey>(
+    key: T,
+    field: string,
+  ): number | null
+  writeFieldCommittedAt<T extends YDocPartitionKey>(
+    key: T,
+    field: string,
+    committedAt: number,
+  ): void
 }
 
 interface ChannelEntry {
@@ -65,47 +87,46 @@ export class RealmChannelRegistry {
       appendPartitionText: (key, field, value) =>
         appendPartitionText(doc, key, field, value),
       readPartitionText: (key, field) => readPartitionText(doc, key, field),
+      readField: (key, field) => readPartitionField(doc, key, field),
+      writeField: (key, field, value) =>
+        writePartitionField(doc, key, field, value),
+      readFieldCommittedAt: (key, field) =>
+        readPartitionFieldCommittedAt(doc, key, field),
+      writeFieldCommittedAt: (key, field, committedAt) =>
+        writePartitionFieldCommittedAt(doc, key, field, committedAt),
     }
     this.channels.set(channelId, { ref, channel })
     return channel
   }
 
-  public get(ref: RealmChannelRef, realmId = ref.realmId): RealmChannel {
-    if (ref.realmId !== realmId) {
-      throw new Error(
-        `Realm mismatch for channel ${ref.channelId}: expected ${ref.realmId}, received ${realmId}`,
-      )
-    }
-    const entry = this.channels.get(ref.channelId)
+  public get(realmId: string, docRef: string): RealmChannel {
+    requireIdentifier(realmId, 'realmId')
+    requireIdentifier(docRef, 'docRef')
+    const channelId = deriveChannelId(realmId, docRef)
+    const entry = this.channels.get(channelId)
     if (!entry) {
-      throw new Error(`Channel ${ref.channelId} is not registered`)
-    }
-    if (
-      entry.ref.realmId !== ref.realmId ||
-      entry.ref.docRef !== ref.docRef
-    ) {
-      throw new Error(`Channel reference ${ref.channelId} does not match registry`)
+      throw new Error(`Channel ${channelId} is not registered`)
     }
     return entry.channel
   }
 
-  public destroy(ref: RealmChannelRef, realmId = ref.realmId): void {
-    const channel = this.get(ref, realmId)
-    this.channels.delete(ref.channelId)
+  public destroy(realmId: string, docRef: string): void {
+    const channel = this.get(realmId, docRef)
+    this.channels.delete(channel.channelId)
     destroyDoc(channel.doc)
   }
 
   public destroyRealm(realmId: string): void {
     for (const entry of Array.from(this.channels.values())) {
       if (entry.ref.realmId === realmId) {
-        this.destroy(entry.ref)
+        this.destroy(realmId, entry.ref.docRef)
       }
     }
   }
 
   public destroyAll(): void {
     for (const entry of Array.from(this.channels.values())) {
-      this.destroy(entry.ref)
+      this.destroy(entry.ref.realmId, entry.ref.docRef)
     }
   }
 

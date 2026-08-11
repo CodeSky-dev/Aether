@@ -66,6 +66,56 @@ export function readPartitionText<T extends YDocPartitionKey>(
   return typeof value === 'string' ? value : ''
 }
 
+export function readPartitionField<T extends YDocPartitionKey>(
+  doc: Y.Doc,
+  key: T,
+  field: string,
+): unknown {
+  return getPartition(doc, key).get(field)
+}
+
+export function writePartitionField<T extends YDocPartitionKey>(
+  doc: Y.Doc,
+  key: T,
+  field: string,
+  value: unknown,
+): void {
+  doc.transact(() => {
+    getPartition(doc, key).set(field, value)
+  })
+}
+
+function getFieldMetadata(doc: Y.Doc): Y.Map<unknown> {
+  return doc.getMap('__aether_current_sync_field_metadata')
+}
+
+function fieldMetadataKey(
+  partition: YDocPartitionKey,
+  field: string,
+): string {
+  return `${partition}:${field}`
+}
+
+export function readPartitionFieldCommittedAt<T extends YDocPartitionKey>(
+  doc: Y.Doc,
+  key: T,
+  field: string,
+): number | null {
+  const value = getFieldMetadata(doc).get(fieldMetadataKey(key, field))
+  return typeof value === 'number' ? value : null
+}
+
+export function writePartitionFieldCommittedAt<T extends YDocPartitionKey>(
+  doc: Y.Doc,
+  key: T,
+  field: string,
+  committedAt: number,
+): void {
+  doc.transact(() => {
+    getFieldMetadata(doc).set(fieldMetadataKey(key, field), committedAt)
+  })
+}
+
 export function subscribeDocUpdates(
   doc: Y.Doc,
   listener: (update: Uint8Array, origin: unknown) => void,

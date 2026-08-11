@@ -24,4 +24,10 @@ describe('Yjs serialization adapter', () => {
       'CRDT schema version mismatch',
     )
   })
+
+  it('非法 base64 输入显式失败', () => {
+    const payload = JSON.stringify({ schemaVersion: 1, data: '%%%=' })
+
+    expect(() => deserializeUpdate(payload)).toThrow('Invalid base64 payload')
+  })
 })

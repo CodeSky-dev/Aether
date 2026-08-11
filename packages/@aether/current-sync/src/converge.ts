@@ -1,5 +1,6 @@
 // @aether/current-sync · 基础字段级 Converge Engine。
 import type { ActorType, YDocPartitionKey } from '@aether/types'
+import type { RealmChannel } from './realm-channel.js'
 
 export type ConvergeStrategy = 'crdt' | 'lww' | 'manual'
 
@@ -53,11 +54,7 @@ export interface ConvergeResult {
   conflict: ConflictRecord | null
 }
 
-interface StoredField {
-  value: unknown
-  stateHash: string
-  committedAt: number
-}
+export type StateHashFunction = (value: unknown) => string
 
 function stableSerialize(value: unknown): string {
   if (value === undefined) {
@@ -76,6 +73,7 @@ function stableSerialize(value: unknown): string {
     .join(',')}}`
 }
 
+// 非加密用途的基线实现；生产环境可通过 hashValue 注入更强哈希。
 function hashValue(value: unknown): string {
   const serialized = stableSerialize(value)
   let hash = 2_166_136_261
@@ -92,20 +90,40 @@ function fieldKey(partition: YDocPartitionKey, fieldPath: string): string {
 
 export interface ConvergeEngineOptions {
   realmId: string
+  channel: RealmChannel
   policies?: readonly FieldPolicy[]
   now?: () => number
+  hashValue?: StateHashFunction
+  maxIdempotencyEntries?: number
 }
 
 export class ConvergeEngine {
   private readonly realmId: string
+  private readonly channel: RealmChannel
   private readonly policies = new Map<string, ConvergeStrategy>()
-  private readonly fields = new Map<string, StoredField>()
   private readonly idempotency = new Map<string, ConvergeResult>()
   private readonly now: () => number
+  private readonly hashValue: StateHashFunction
+  private readonly maxIdempotencyEntries: number
 
   public constructor(options: ConvergeEngineOptions) {
+    if (options.channel.realmId !== options.realmId) {
+      throw new Error(
+        `Realm mismatch: expected ${options.realmId}, received ${options.channel.realmId}`,
+      )
+    }
+    if (
+      options.maxIdempotencyEntries !== undefined &&
+      (!Number.isInteger(options.maxIdempotencyEntries) ||
+        options.maxIdempotencyEntries < 1)
+    ) {
+      throw new Error('maxIdempotencyEntries must be a positive integer')
+    }
     this.realmId = options.realmId
+    this.channel = options.channel
     this.now = options.now ?? Date.now
+    this.hashValue = options.hashValue ?? hashValue
+    this.maxIdempotencyEntries = options.maxIdempotencyEntries ?? 1000
     for (const policy of options.policies ?? []) {
       this.setPolicy(policy)
     }
@@ -132,14 +150,15 @@ export class ConvergeEngine {
     partition: YDocPartitionKey,
     fieldPath: string,
   ): unknown {
-    return this.fields.get(fieldKey(partition, fieldPath))?.value
+    return this.channel.readField(partition, fieldPath)
   }
 
   public getStateHash(
     partition: YDocPartitionKey,
     fieldPath: string,
   ): string | null {
-    return this.fields.get(fieldKey(partition, fieldPath))?.stateHash ?? null
+    const value = this.getState(partition, fieldPath)
+    return value === undefined ? null : this.hashValue(value)
   }
 
   public commit(operation: EntityCommitOperation): ConvergeResult {
@@ -153,13 +172,20 @@ export class ConvergeEngine {
       return { ...previous, deduplicated: true }
     }
 
-    const key = fieldKey(operation.partition, operation.field_path)
-    const current = this.fields.get(key)
     const strategy = this.getPolicy(operation.partition, operation.field_path)
-    const incomingStateHash = hashValue(operation.value)
-    const previousStateHash = current?.stateHash ?? null
+    const currentValue = this.getState(
+      operation.partition,
+      operation.field_path,
+    )
+    const incomingStateHash = this.hashValue(operation.value)
+    const previousStateHash =
+      currentValue === undefined ? null : this.hashValue(currentValue)
     const hasStaleBase = previousStateHash !== operation.base_state_hash
     const submittedAt = operation.submitted_at ?? this.now()
+    const currentCommittedAt = this.channel.readFieldCommittedAt(
+      operation.partition,
+      operation.field_path,
+    )
     let accepted = !hasStaleBase
     let conflict: ConflictRecord | null = null
 
@@ -174,7 +200,8 @@ export class ConvergeEngine {
         incomingStateHash,
       )
     } else if (hasStaleBase && strategy === 'lww') {
-      accepted = !current || submittedAt >= current.committedAt
+      accepted =
+        currentCommittedAt === null || submittedAt >= currentCommittedAt
       conflict = this.createConflict(
         operation,
         strategy,
@@ -188,11 +215,16 @@ export class ConvergeEngine {
     }
 
     if (accepted) {
-      this.fields.set(key, {
-        value: operation.value,
-        stateHash: incomingStateHash,
-        committedAt: submittedAt,
-      })
+      this.channel.writeField(
+        operation.partition,
+        operation.field_path,
+        operation.value,
+      )
+      this.channel.writeFieldCommittedAt(
+        operation.partition,
+        operation.field_path,
+        submittedAt,
+      )
     }
 
     const result: ConvergeResult = {
@@ -200,11 +232,22 @@ export class ConvergeEngine {
       deduplicated: false,
       strategy,
       stateHash: accepted ? incomingStateHash : previousStateHash,
-      value: accepted ? operation.value : current?.value,
+      value: accepted ? operation.value : currentValue,
       conflict,
     }
     this.idempotency.set(operation.idempotency_key, result)
+    this.evictOldestIdempotencyEntry()
     return result
+  }
+
+  private evictOldestIdempotencyEntry(): void {
+    while (this.idempotency.size > this.maxIdempotencyEntries) {
+      const oldestKey = this.idempotency.keys().next().value
+      if (typeof oldestKey !== 'string') {
+        return
+      }
+      this.idempotency.delete(oldestKey)
+    }
   }
 
   private createConflict(

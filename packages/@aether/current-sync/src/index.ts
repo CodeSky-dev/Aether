@@ -41,6 +41,7 @@ export {
   type ConvergeStrategy,
   type EntityCommitOperation,
   type FieldPolicy,
+  type StateHashFunction,
 } from './converge.js'
 export {
   deserializeStateVector,
