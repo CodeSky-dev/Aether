@@ -29,6 +29,7 @@ export type ProviderConnectionState =
 export interface ProviderOptions extends PresenceOptions {
   transport: ProviderTransport
   doc?: Y.Doc
+  handshakeTimeoutMs?: number
 }
 
 export type ConnectionStateListener = (
@@ -44,6 +45,7 @@ interface PendingHandshake {
   requestId: string
   resolve: () => void
   reject: (error: unknown) => void
+  timer: ReturnType<typeof setTimeout> | null
 }
 
 export class YjsProvider {
@@ -54,15 +56,25 @@ export class YjsProvider {
   private readonly stateListeners = new Set<ConnectionStateListener>()
   private readonly transport: ProviderTransport
   private readonly stopDocUpdates: () => void
+  private readonly handshakeTimeoutMs: number
   private readonly respondedHandshakeRequests = new Set<string>()
   private pendingHandshake: PendingHandshake | null = null
   private connectionPromise: Promise<void> | null = null
   private handshakeSequence = 0
   private localPresence: LocalPresence | null = null
+  private transportConnected = false
 
   public constructor(options: ProviderOptions) {
+    if (
+      options.handshakeTimeoutMs !== undefined &&
+      (!Number.isFinite(options.handshakeTimeoutMs) ||
+        options.handshakeTimeoutMs <= 0)
+    ) {
+      throw new Error('handshakeTimeoutMs must be a positive number')
+    }
     this.doc = options.doc ?? createDoc()
     this.transport = options.transport
+    this.handshakeTimeoutMs = options.handshakeTimeoutMs ?? 10_000
     this.presence = new PresenceChannel(this.doc, options)
     this.stopDocUpdates = subscribeDocUpdates(this.doc, (update, origin) => {
       if (this.state === 'connected' && origin !== REMOTE_ORIGIN) {
@@ -86,13 +98,29 @@ export class YjsProvider {
     this.setState('connecting')
     this.respondedHandshakeRequests.clear()
     const requestId = this.createHandshakeRequestId()
+    let resolveHandshake: () => void = () => {}
+    let rejectHandshake: (error: unknown) => void = () => {}
     const connectionPromise = new Promise<void>((resolve, reject) => {
-      this.pendingHandshake = { requestId, resolve, reject }
+      resolveHandshake = resolve
+      rejectHandshake = reject
     })
+    const pendingHandshake: PendingHandshake = {
+      requestId,
+      resolve: resolveHandshake,
+      reject: rejectHandshake,
+      timer: null,
+    }
+    this.pendingHandshake = pendingHandshake
     this.connectionPromise = connectionPromise
+    pendingHandshake.timer = this.scheduleHandshakeTimeout(requestId)
+    this.transportConnected = true
 
     try {
       await this.transport.connect(this.handleMessage)
+      if (this.pendingHandshake?.requestId !== requestId) {
+        await connectionPromise
+        return
+      }
       this.transport.send({
         kind: 'sync-state-vector',
         requestId,
@@ -116,12 +144,17 @@ export class YjsProvider {
     if (this.state === 'disconnected') {
       return
     }
+    const shouldSendPresenceRemoval =
+      this.state === 'connected' && this.transportConnected
     this.failHandshake(new Error(HANDSHAKE_ERROR))
     this.presence.clearLocalPresence()
-    this.transport.send({
-      kind: 'presence',
-      payload: this.presence.encodeUpdate([this.presence.getLocalClientId()]),
-    })
+    if (shouldSendPresenceRemoval) {
+      this.transport.send({
+        kind: 'presence',
+        payload: this.presence.encodeUpdate([this.presence.getLocalClientId()]),
+      })
+    }
+    this.transportConnected = false
     this.transport.disconnect()
     this.respondedHandshakeRequests.clear()
     this.setState('disconnected')
@@ -180,9 +213,26 @@ export class YjsProvider {
       this.respondToStateVector(message)
       return
     }
+    if (!this.transportConnected) {
+      return
+    }
     const update = deserializeUpdate(message.payload)
     applyDocUpdate(this.doc, update, REMOTE_ORIGIN)
+    if (message.stage === 'final') {
+      return
+    }
     if (this.pendingHandshake?.requestId === message.requestId) {
+      const peerStateVector = deserializeStateVector(message.stateVector)
+      const missingUpdate = diffDocUpdate(
+        encodeDocUpdate(this.doc),
+        peerStateVector,
+      )
+      this.transport.send({
+        kind: 'sync-update',
+        requestId: message.requestId,
+        stage: 'final',
+        payload: serializeUpdate(missingUpdate),
+      })
       this.completeHandshake()
     }
   }
@@ -190,7 +240,10 @@ export class YjsProvider {
   private respondToStateVector(
     message: Extract<ProviderMessage, { kind: 'sync-state-vector' }>,
   ): void {
-    if (this.respondedHandshakeRequests.has(message.requestId)) {
+    if (
+      !this.transportConnected ||
+      this.respondedHandshakeRequests.has(message.requestId)
+    ) {
       return
     }
     this.respondedHandshakeRequests.add(message.requestId)
@@ -199,7 +252,9 @@ export class YjsProvider {
     this.transport.send({
       kind: 'sync-update',
       requestId: message.requestId,
+      stage: 'response',
       payload: serializeUpdate(update),
+      stateVector: serializeStateVector(encodeDocStateVector(this.doc)),
     })
   }
 
@@ -207,6 +262,9 @@ export class YjsProvider {
     const pending = this.pendingHandshake
     if (!pending) {
       return
+    }
+    if (pending.timer) {
+      clearTimeout(pending.timer)
     }
     this.pendingHandshake = null
     this.connectionPromise = null
@@ -217,11 +275,41 @@ export class YjsProvider {
 
   private failHandshake(error: unknown): void {
     const pending = this.pendingHandshake
+    if (pending?.timer) {
+      clearTimeout(pending.timer)
+    }
     this.pendingHandshake = null
     this.connectionPromise = null
     if (pending) {
       pending.reject(error)
     }
+  }
+
+  private scheduleHandshakeTimeout(
+    requestId: string,
+  ): ReturnType<typeof setTimeout> {
+    const timer = setTimeout(() => {
+      if (this.pendingHandshake?.requestId !== requestId) {
+        return
+      }
+      this.transportConnected = false
+      this.transport.disconnect()
+      this.failHandshake(
+        new Error(
+          `Provider handshake timed out after ${this.handshakeTimeoutMs}ms`,
+        ),
+      )
+      this.setState('disconnected')
+    }, this.handshakeTimeoutMs)
+    if (
+      typeof timer === 'object' &&
+      timer !== null &&
+      'unref' in timer &&
+      typeof timer.unref === 'function'
+    ) {
+      timer.unref()
+    }
+    return timer
   }
 
   private replayLocalPresence(): void {

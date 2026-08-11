@@ -17,6 +17,14 @@ export type ProviderMessage =
   | {
       kind: 'sync-update'
       requestId: string
+      stage: 'response'
+      payload: string
+      stateVector: string
+    }
+  | {
+      kind: 'sync-update'
+      requestId: string
+      stage: 'final'
       payload: string
     }
 

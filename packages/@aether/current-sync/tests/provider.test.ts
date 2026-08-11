@@ -2,10 +2,17 @@ import { describe, expect, it } from 'vitest'
 import {
   appendPartitionText,
   applyDocUpdate,
+  createDoc,
   createLoopbackTransportPair,
+  deserializeStateVector,
   deserializeUpdate,
+  diffDocUpdate,
+  encodeDocStateVector,
   encodeDocUpdate,
+  serializeStateVector,
+  serializeUpdate,
   type ProviderMessage,
+  type ProviderMessageHandler,
   type ProviderTransport,
   YjsProvider,
 } from '../src/index.js'
@@ -101,6 +108,66 @@ describe('@aether/current-sync', () => {
     )
     first.destroy()
     second.destroy()
+  })
+
+  it('被动对端只响应握手时，发起方的离线编辑也能送达', async () => {
+    const serverDoc = createDoc()
+    appendPartitionText(serverDoc, 'code', 'file', 'shared-base;')
+    let clientHandler: ProviderMessageHandler | null = null
+    let connected = false
+    const passiveTransport: ProviderTransport = {
+      connect: (handler) => {
+        clientHandler = handler
+        connected = true
+      },
+      send: (message) => {
+        if (!connected) {
+          return
+        }
+        if (message.kind === 'sync-state-vector') {
+          const missingUpdate = diffDocUpdate(
+            encodeDocUpdate(serverDoc),
+            deserializeStateVector(message.payload),
+          )
+          clientHandler?.({
+            kind: 'sync-update',
+            requestId: message.requestId,
+            stage: 'response',
+            payload: serializeUpdate(missingUpdate),
+            stateVector: serializeStateVector(
+              encodeDocStateVector(serverDoc),
+            ),
+          })
+        } else if (message.kind === 'sync-update' && message.stage === 'final') {
+          applyDocUpdate(
+            serverDoc,
+            deserializeUpdate(message.payload),
+            Symbol('passive-server'),
+          )
+        }
+      },
+      disconnect: () => {
+        connected = false
+        clientHandler = null
+      },
+    }
+    const client = new YjsProvider({
+      actorId: 'client',
+      transport: passiveTransport,
+    })
+    applyDocUpdate(client.doc, encodeDocUpdate(serverDoc), Symbol('seed'))
+    await client.connect()
+    client.disconnect()
+    appendPartitionText(client.doc, 'code', 'file', 'client-offline;')
+
+    await client.reconnect()
+
+    const clientContent = client.getPartition('code').get('file')?.toString()
+    const serverContent = serverDoc.getMap('code').get('file')?.toString()
+    expect(clientContent).toContain('client-offline;')
+    expect(serverContent).toBe(clientContent)
+    client.destroy()
+    serverDoc.destroy()
   })
 
   it('握手只回传缺失增量，重复 connect 不产生额外握手消息', async () => {
@@ -207,6 +274,51 @@ describe('@aether/current-sync', () => {
     await expect(provider.connect()).rejects.toThrow(
       'CRDT schema version mismatch',
     )
+    provider.destroy()
+  })
+
+  it('握手超时后 reject，迟到响应不会恢复连接', async () => {
+    let handler: ProviderMessageHandler | null = null
+    let requestId = ''
+    const sentMessages: ProviderMessage[] = []
+    const transport: ProviderTransport = {
+      connect: (nextHandler) => {
+        handler = nextHandler
+      },
+      send: (message) => {
+        sentMessages.push(message)
+        if (message.kind === 'sync-state-vector') {
+          requestId = message.requestId
+        }
+      },
+      disconnect: () => {},
+    }
+    const provider = new YjsProvider({
+      actorId: 'first',
+      transport,
+      handshakeTimeoutMs: 10,
+    })
+    provider.disconnect()
+    expect(sentMessages).toHaveLength(0)
+
+    await expect(provider.connect()).rejects.toThrow('timed out')
+    expect(provider.connectionState).toBe('disconnected')
+    const sentAfterTimeout = sentMessages.length
+    const lateHandler = handler as unknown as ProviderMessageHandler
+    lateHandler({
+      kind: 'sync-state-vector',
+      requestId: 'late-request',
+      payload: serializeStateVector(new Uint8Array()),
+    })
+    lateHandler({
+      kind: 'sync-update',
+      requestId,
+      stage: 'response',
+      payload: serializeUpdate(new Uint8Array()),
+      stateVector: serializeStateVector(new Uint8Array()),
+    })
+    expect(sentMessages).toHaveLength(sentAfterTimeout)
+    expect(provider.connectionState).toBe('disconnected')
     provider.destroy()
   })
 
