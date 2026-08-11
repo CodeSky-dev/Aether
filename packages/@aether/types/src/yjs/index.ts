@@ -29,6 +29,8 @@ export interface PresenceSnapshot {
   cursor: { file: string; offset: number } | null
   selection: { file: string; start: number; end: number } | null
   lastSeenAt: number
+  /** 本 actor 的单调 Presence 序号；旧客户端缺省为未带序号。 */
+  sequence?: number
 }
 
 /** CRDT 文档结构版本契约，所有 Yjs 适配层共享此版本。 */

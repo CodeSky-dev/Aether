@@ -4,6 +4,7 @@ import {
   applyAwarenessUpdate,
   Awareness,
   encodeAwarenessUpdate,
+  modifyAwarenessUpdate,
   removeAwarenessStates,
 } from 'y-protocols/awareness'
 import type * as Y from 'yjs'
@@ -25,6 +26,12 @@ export class PresenceChannel {
   private readonly now: () => number
   private readonly listeners = new Set<PresenceChangeListener>()
   private readonly sweepTimer: ReturnType<typeof setInterval>
+  private readonly knownSequences = new Map<string, number>()
+  private localSequence = 0
+  private localPresence: Pick<
+    PresenceSnapshot,
+    'cursor' | 'selection'
+  > | null = null
 
   public constructor(doc: Y.Doc, options: PresenceOptions) {
     this.awareness = new Awareness(doc)
@@ -50,12 +57,24 @@ export class PresenceChannel {
   public setLocalPresence(
     presence: Pick<PresenceSnapshot, 'cursor' | 'selection'>,
   ): void {
+    this.localPresence = presence
+    this.localSequence += 1
+    this.knownSequences.set(this.actorId, this.localSequence)
     this.awareness.setLocalState({
       actorId: this.actorId,
       cursor: presence.cursor,
       selection: presence.selection,
       lastSeenAt: this.now(),
+      sequence: this.localSequence,
     })
+  }
+
+  public refreshLocalPresence(): boolean {
+    if (!this.localPresence) {
+      return false
+    }
+    this.setLocalPresence(this.localPresence)
+    return true
   }
 
   public clearLocalPresence(): void {
@@ -70,7 +89,44 @@ export class PresenceChannel {
   }
 
   public applyUpdate(update: Uint8Array, origin: symbol): void {
-    applyAwarenessUpdate(this.awareness, update, origin)
+    const filteredUpdate = modifyAwarenessUpdate(update, (state) => {
+      const rawState: unknown = state
+      if (!rawState || typeof rawState !== 'object') {
+        return rawState
+      }
+      const value = rawState as Partial<PresenceSnapshot>
+      if (
+        typeof value.actorId !== 'string' ||
+        typeof value.sequence !== 'number'
+      ) {
+        return rawState
+      }
+      const knownSequence = this.knownSequences.get(value.actorId)
+      if (
+        knownSequence === undefined ||
+        value.sequence > knownSequence
+      ) {
+        return rawState
+      }
+      return this.findStateByActorId(value.actorId)
+    })
+    applyAwarenessUpdate(this.awareness, filteredUpdate, origin)
+    for (const state of this.awareness.getStates().values()) {
+      if (
+        state &&
+        typeof state === 'object' &&
+        typeof state.actorId === 'string' &&
+        typeof state.sequence === 'number'
+      ) {
+        this.knownSequences.set(
+          state.actorId,
+          Math.max(
+            this.knownSequences.get(state.actorId) ?? 0,
+            state.sequence,
+          ),
+        )
+      }
+    }
     this.sweepExpired()
   }
 
@@ -137,6 +193,22 @@ export class PresenceChannel {
       cursor: value.cursor ?? null,
       selection: value.selection ?? null,
       lastSeenAt: value.lastSeenAt,
+      ...(typeof value.sequence === 'number'
+        ? { sequence: value.sequence }
+        : {}),
     }
+  }
+
+  private findStateByActorId(actorId: string): unknown {
+    for (const state of this.awareness.getStates().values()) {
+      if (
+        state &&
+        typeof state === 'object' &&
+        (state as Partial<PresenceSnapshot>).actorId === actorId
+      ) {
+        return state
+      }
+    }
+    return null
   }
 }

@@ -30,6 +30,8 @@ export interface ProviderOptions extends PresenceOptions {
   transport: ProviderTransport
   doc?: Y.Doc
   handshakeTimeoutMs?: number
+  presenceThrottleMs?: number
+  presenceHeartbeatMs?: number
 }
 
 export type ConnectionStateListener = (
@@ -38,6 +40,8 @@ export type ConnectionStateListener = (
 
 const REMOTE_ORIGIN = Symbol('remote-update')
 const HANDSHAKE_ERROR = 'Provider handshake was interrupted'
+const DEFAULT_PRESENCE_THROTTLE_MS = 50
+const DEFAULT_PRESENCE_TIMEOUT_MS = 30_000
 
 type LocalPresence = Pick<PresenceSnapshot, 'cursor' | 'selection'>
 
@@ -57,12 +61,17 @@ export class YjsProvider {
   private readonly transport: ProviderTransport
   private readonly stopDocUpdates: () => void
   private readonly handshakeTimeoutMs: number
+  private readonly presenceThrottleMs: number
+  private readonly presenceHeartbeatMs: number
   private readonly respondedHandshakeRequests = new Set<string>()
   private pendingHandshake: PendingHandshake | null = null
   private connectionPromise: Promise<void> | null = null
   private handshakeSequence = 0
   private localPresence: LocalPresence | null = null
   private transportConnected = false
+  private presenceWindowTimer: ReturnType<typeof setTimeout> | null = null
+  private presenceHeartbeatTimer: ReturnType<typeof setInterval> | null = null
+  private presenceBroadcastPending = false
 
   public constructor(options: ProviderOptions) {
     if (
@@ -72,9 +81,31 @@ export class YjsProvider {
     ) {
       throw new Error('handshakeTimeoutMs must be a positive number')
     }
+    const presenceTimeoutMs = options.timeoutMs ?? DEFAULT_PRESENCE_TIMEOUT_MS
+    const presenceHeartbeatMs =
+      options.presenceHeartbeatMs ?? Math.max(1, Math.floor(presenceTimeoutMs / 3))
+    if (
+      options.presenceThrottleMs !== undefined &&
+      (!Number.isFinite(options.presenceThrottleMs) ||
+        options.presenceThrottleMs <= 0)
+    ) {
+      throw new Error('presenceThrottleMs must be a positive number')
+    }
+    if (
+      !Number.isFinite(presenceHeartbeatMs) ||
+      presenceHeartbeatMs <= 0 ||
+      presenceHeartbeatMs >= presenceTimeoutMs
+    ) {
+      throw new Error(
+        'presenceHeartbeatMs must be positive and less than timeoutMs',
+      )
+    }
     this.doc = options.doc ?? createDoc()
     this.transport = options.transport
     this.handshakeTimeoutMs = options.handshakeTimeoutMs ?? 10_000
+    this.presenceThrottleMs =
+      options.presenceThrottleMs ?? DEFAULT_PRESENCE_THROTTLE_MS
+    this.presenceHeartbeatMs = presenceHeartbeatMs
     this.presence = new PresenceChannel(this.doc, options)
     this.stopDocUpdates = subscribeDocUpdates(this.doc, (update, origin) => {
       if (this.state === 'connected' && origin !== REMOTE_ORIGIN) {
@@ -142,11 +173,13 @@ export class YjsProvider {
 
   public disconnect(): void {
     if (this.state === 'disconnected') {
+      this.clearPresenceTimers()
       return
     }
     const shouldSendPresenceRemoval =
       this.state === 'connected' && this.transportConnected
     this.failHandshake(new Error(HANDSHAKE_ERROR))
+    this.clearPresenceTimers()
     this.presence.clearLocalPresence()
     if (shouldSendPresenceRemoval) {
       this.transport.send({
@@ -171,12 +204,18 @@ export class YjsProvider {
   ): void {
     this.localPresence = presence
     this.presence.setLocalPresence(presence)
-    if (this.state === 'connected') {
-      this.transport.send({
-        kind: 'presence',
-        payload: this.presence.encodeUpdate(),
-      })
+    if (this.state !== 'connected' || !this.transportConnected) {
+      return
     }
+    const windowOpen = this.presenceWindowTimer !== null
+    if (!windowOpen) {
+      this.broadcastPresence()
+      this.presenceWindowTimer = this.schedulePresenceWindow()
+    }
+    if (windowOpen) {
+      this.presenceBroadcastPending = true
+    }
+    this.startPresenceHeartbeat()
   }
 
   public subscribeConnectionState(
@@ -316,11 +355,76 @@ export class YjsProvider {
     if (!this.localPresence) {
       return
     }
-    this.presence.setLocalPresence(this.localPresence)
+    this.presence.refreshLocalPresence()
+    this.broadcastPresence()
+    this.startPresenceHeartbeat()
+  }
+
+  private broadcastPresence(): void {
+    if (this.state !== 'connected' || !this.transportConnected) {
+      return
+    }
     this.transport.send({
       kind: 'presence',
-      payload: this.presence.encodeUpdate(),
+      payload: this.presence.encodeUpdate([this.presence.getLocalClientId()]),
     })
+  }
+
+  private schedulePresenceWindow(): ReturnType<typeof setTimeout> {
+    const timer = setTimeout(() => {
+      this.presenceWindowTimer = null
+      if (this.presenceBroadcastPending) {
+        this.presenceBroadcastPending = false
+        this.broadcastPresence()
+      }
+    }, this.presenceThrottleMs)
+    this.unrefTimer(timer)
+    return timer
+  }
+
+  private startPresenceHeartbeat(): void {
+    this.clearPresenceHeartbeat()
+    this.presenceHeartbeatTimer = setInterval(() => {
+      if (
+        this.state !== 'connected' ||
+        !this.transportConnected ||
+        this.presenceWindowTimer !== null ||
+        !this.localPresence
+      ) {
+        return
+      }
+      if (this.presence.refreshLocalPresence()) {
+        this.broadcastPresence()
+      }
+    }, this.presenceHeartbeatMs)
+    this.unrefTimer(this.presenceHeartbeatTimer)
+  }
+
+  private clearPresenceTimers(): void {
+    if (this.presenceWindowTimer) {
+      clearTimeout(this.presenceWindowTimer)
+      this.presenceWindowTimer = null
+    }
+    this.clearPresenceHeartbeat()
+    this.presenceBroadcastPending = false
+  }
+
+  private clearPresenceHeartbeat(): void {
+    if (this.presenceHeartbeatTimer) {
+      clearInterval(this.presenceHeartbeatTimer)
+      this.presenceHeartbeatTimer = null
+    }
+  }
+
+  private unrefTimer(timer: ReturnType<typeof setTimeout>): void {
+    if (
+      typeof timer === 'object' &&
+      timer !== null &&
+      'unref' in timer &&
+      typeof timer.unref === 'function'
+    ) {
+      timer.unref()
+    }
   }
 
   private createHandshakeRequestId(): string {

@@ -54,7 +54,7 @@ graph LR
 - [ ] Hocuspocus 收敛服务接入
 - [ ] Drift Persistence：IndexedDB 持久化
 - [x] Reconnect Handshake：增量对账
-- [ ] Cursor Wavefront：多光标渲染
+- [x] Cursor Wavefront：多光标渲染
 - [ ] `@aether/state`：Zustand store 与 Yjs 双向绑定
 
 **退出标准**：
