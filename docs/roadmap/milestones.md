@@ -55,7 +55,7 @@ graph LR
 - [ ] Drift Persistence：IndexedDB 持久化
 - [x] Reconnect Handshake：增量对账
 - [x] Cursor Wavefront：多光标渲染
-- [ ] `@aether/state`：Zustand store 与 Yjs 双向绑定
+- [x] `@aether/state`：Zustand store 与 Yjs 双向绑定
 
 **退出标准**：
 - 双客户端并发编辑无数据丢失。

@@ -25,8 +25,10 @@ export {
   encodeDocStateVector,
   encodeDocUpdate,
   getPartition,
+  readPartitionField,
   readPartitionText,
   subscribeDocUpdates,
+  writePartitionField,
 } from './yjs-adapter.js'
 export {
   RealmChannelRegistry,
