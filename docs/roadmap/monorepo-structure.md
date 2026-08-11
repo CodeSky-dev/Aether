@@ -49,6 +49,12 @@ aether/
 | `@aether/config` | TS7 / ESLint / Tailwind 共享配置 | 无（对外运行时零依赖；内部自带 eslint/tailwind 工具依赖） | 纯配置 |
 | `@aether/observability` | 日志、遥测、遥测采集 SDK | `@aether/types` | tsc |
 
+### 品牌资产
+
+- Logo 等品牌 SVG 统一放在 `packages/@aether/ui/src/assets/branding/`，经 `@aether/ui/assets/branding/*` 导出供全仓引用。
+- `aether-logo.svg`：完整品牌标（图形标 + 字标，品牌色）；`aether-logo-baseline.svg`：单色字标基线版（深炭灰）。
+- 新增品牌资产一律入此目录并更新 `@aether/ui` 的 `exports` 映射。
+
 ## 架构规则
 
 ### 依赖方向单向
