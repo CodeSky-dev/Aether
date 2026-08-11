@@ -543,6 +543,52 @@ describe('@aether/current-sync', () => {
     receiver.destroy()
   })
 
+  it('Presence 会话清扫后修剪序号记录并接受新会话的低序号', () => {
+    let now = 0
+    const receiver = new YjsProvider({
+      actorId: 'receiver',
+      timeoutMs: 10,
+      now: () => now,
+      transport: createLoopbackTransportPair()[0],
+    })
+    const firstSession = new YjsProvider({
+      actorId: 'shared-actor',
+      now: () => now,
+      transport: createLoopbackTransportPair()[0],
+    })
+    firstSession.setLocalPresence({
+      cursor: { file: 'a.ts', offset: 1 },
+      selection: null,
+    })
+    receiver.presence.applyUpdate(
+      firstSession.presence.encodeUpdate(),
+      Symbol('test'),
+    )
+    now = 11
+    receiver.presence.sweepExpired()
+    expect(receiver.presence.getSnapshots()).toEqual([])
+
+    const newSession = new YjsProvider({
+      actorId: 'shared-actor',
+      now: () => now,
+      transport: createLoopbackTransportPair()[0],
+    })
+    newSession.setLocalPresence({
+      cursor: { file: 'a.ts', offset: 2 },
+      selection: null,
+    })
+    receiver.presence.applyUpdate(
+      newSession.presence.encodeUpdate(),
+      Symbol('test'),
+    )
+    expect(receiver.presence.getSnapshots()[0]?.cursor?.offset).toBe(2)
+    expect(receiver.presence.getSnapshots()[0]?.sequence).toBe(1)
+
+    firstSession.destroy()
+    newSession.destroy()
+    receiver.destroy()
+  })
+
   it('持续高频移动时每个节流窗口只广播一条 Presence', async () => {
     vi.useFakeTimers()
     const [rawFirst, rawSecond] = createLoopbackTransportPair()

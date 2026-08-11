@@ -1,11 +1,10 @@
 // @aether/current-sync · Presence 通道。
 import type { PresenceSnapshot } from '@aether/types'
-import * as decoding from 'lib0/decoding'
-import * as encoding from 'lib0/encoding'
 import {
   applyAwarenessUpdate,
   Awareness,
   encodeAwarenessUpdate,
+  modifyAwarenessUpdate,
   removeAwarenessStates,
 } from 'y-protocols/awareness'
 import type * as Y from 'yjs'
@@ -23,11 +22,12 @@ export type PresenceChangeListener = (
 export class PresenceChannel {
   private readonly awareness: Awareness
   private readonly actorId: string
+  private readonly sessionId: string
   private readonly timeoutMs: number
   private readonly now: () => number
   private readonly listeners = new Set<PresenceChangeListener>()
   private readonly sweepTimer: ReturnType<typeof setInterval>
-  private readonly knownSequences = new Map<number, number>()
+  private readonly knownSequences = new Map<string, number>()
   private localSequence = 0
   private localPresence: Pick<
     PresenceSnapshot,
@@ -37,6 +37,7 @@ export class PresenceChannel {
   public constructor(doc: Y.Doc, options: PresenceOptions) {
     this.awareness = new Awareness(doc)
     this.actorId = options.actorId
+    this.sessionId = String(this.awareness.clientID)
     this.timeoutMs = options.timeoutMs ?? 30_000
     this.now = options.now ?? Date.now
     this.awareness.on('change', this.handleAwarenessChange)
@@ -60,9 +61,10 @@ export class PresenceChannel {
   ): void {
     this.localPresence = presence
     this.localSequence += 1
-    this.knownSequences.set(this.awareness.clientID, this.localSequence)
+    this.knownSequences.set(this.sessionId, this.localSequence)
     this.awareness.setLocalState({
       actorId: this.actorId,
+      sessionId: this.sessionId,
       cursor: presence.cursor,
       selection: presence.selection,
       lastSeenAt: this.now(),
@@ -90,12 +92,8 @@ export class PresenceChannel {
   }
 
   public applyUpdate(update: Uint8Array, origin: symbol): void {
-    const filteredUpdate = modifyAwarenessUpdateByClientId(update, (state, clientId) => {
+    const filteredUpdate = modifyAwarenessUpdate(update, (state) => {
       const rawState: unknown = state
-      if (rawState === null) {
-        this.knownSequences.delete(clientId)
-        return null
-      }
       if (!rawState || typeof rawState !== 'object') {
         return rawState
       }
@@ -106,27 +104,30 @@ export class PresenceChannel {
       ) {
         return rawState
       }
-      const knownSequence = this.knownSequences.get(clientId)
+      const sessionId = this.getSessionId(value)
+      const knownSequence = this.knownSequences.get(sessionId)
       if (
         knownSequence === undefined ||
         value.sequence > knownSequence
       ) {
         return rawState
       }
-      return this.findStateByClientId(clientId)
+      return this.findStateBySessionId(sessionId)
     })
     applyAwarenessUpdate(this.awareness, filteredUpdate, origin)
-    for (const [clientId, state] of this.awareness.getStates()) {
+    this.pruneKnownSequences()
+    for (const state of this.awareness.getStates().values()) {
       if (
         state &&
         typeof state === 'object' &&
         typeof state.actorId === 'string' &&
         typeof state.sequence === 'number'
       ) {
+        const sessionId = this.getSessionId(state)
         this.knownSequences.set(
-          clientId,
+          sessionId,
           Math.max(
-            this.knownSequences.get(clientId) ?? 0,
+            this.knownSequences.get(sessionId) ?? 0,
             state.sequence,
           ),
         )
@@ -153,7 +154,6 @@ export class PresenceChannel {
       ([clientId, state]) => {
         const snapshot = this.toSnapshot(state)
         if (snapshot && this.now() - snapshot.lastSeenAt > this.timeoutMs) {
-          this.knownSequences.delete(clientId)
           return [clientId]
         }
         return []
@@ -162,6 +162,7 @@ export class PresenceChannel {
     if (expiredClientIds.length > 0) {
       removeAwarenessStates(this.awareness, expiredClientIds, this)
     }
+    this.pruneKnownSequences()
   }
 
   public destroy(): void {
@@ -197,6 +198,9 @@ export class PresenceChannel {
     }
     return {
       actorId: value.actorId,
+      ...(typeof value.sessionId === 'string'
+        ? { sessionId: value.sessionId }
+        : {}),
       cursor: value.cursor ?? null,
       selection: value.selection ?? null,
       lastSeenAt: value.lastSeenAt,
@@ -206,27 +210,34 @@ export class PresenceChannel {
     }
   }
 
-  private findStateByClientId(clientId: number): unknown {
-    return this.awareness.getStates().get(clientId) ?? null
+  private findStateBySessionId(sessionId: string): unknown {
+    for (const state of this.awareness.getStates().values()) {
+      if (
+        state &&
+        typeof state === 'object' &&
+        this.getSessionId(state) === sessionId
+      ) {
+        return state
+      }
+    }
+    return null
   }
-}
 
-function modifyAwarenessUpdateByClientId(
-  update: Uint8Array,
-  modify: (state: unknown, clientId: number) => unknown,
-): Uint8Array {
-  const decoder = decoding.createDecoder(update)
-  const encoder = encoding.createEncoder()
-  const length = decoding.readVarUint(decoder)
-  encoding.writeVarUint(encoder, length)
-  for (let index = 0; index < length; index += 1) {
-    const clientId = decoding.readVarUint(decoder)
-    const clock = decoding.readVarUint(decoder)
-    const state = JSON.parse(decoding.readVarString(decoder)) as unknown
-    const modifiedState = modify(state, clientId)
-    encoding.writeVarUint(encoder, clientId)
-    encoding.writeVarUint(encoder, clock)
-    encoding.writeVarString(encoder, JSON.stringify(modifiedState))
+  private getSessionId(state: Partial<PresenceSnapshot>): string {
+    return state.sessionId ?? state.actorId ?? ''
   }
-  return encoding.toUint8Array(encoder)
+
+  private pruneKnownSequences(): void {
+    const activeSessions = new Set<string>()
+    for (const state of this.awareness.getStates().values()) {
+      if (state && typeof state === 'object') {
+        activeSessions.add(this.getSessionId(state))
+      }
+    }
+    for (const sessionId of this.knownSequences.keys()) {
+      if (!activeSessions.has(sessionId)) {
+        this.knownSequences.delete(sessionId)
+      }
+    }
+  }
 }

@@ -26,6 +26,8 @@ export interface CodeDocumentState {
 
 export interface PresenceSnapshot {
   actorId: string
+  /** 当前 PresenceChannel 实例的会话标识；旧客户端缺省时保持兼容。 */
+  sessionId?: string
   cursor: { file: string; offset: number } | null
   selection: { file: string; start: number; end: number } | null
   lastSeenAt: number

@@ -94,9 +94,6 @@ importers:
       '@aether/types':
         specifier: workspace:*
         version: link:../types
-      lib0:
-        specifier: 0.2.117
-        version: 0.2.117
       y-protocols:
         specifier: 1.0.6
         version: 1.0.6(yjs@13.6.27)
