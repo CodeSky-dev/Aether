@@ -376,6 +376,7 @@ export class YjsProvider {
       if (this.presenceBroadcastPending) {
         this.presenceBroadcastPending = false
         this.broadcastPresence()
+        this.presenceWindowTimer = this.schedulePresenceWindow()
       }
     }, this.presenceThrottleMs)
     this.unrefTimer(timer)

@@ -22,6 +22,7 @@ export type PresenceChangeListener = (
 export class PresenceChannel {
   private readonly awareness: Awareness
   private readonly actorId: string
+  private readonly sessionId: string
   private readonly timeoutMs: number
   private readonly now: () => number
   private readonly listeners = new Set<PresenceChangeListener>()
@@ -36,6 +37,7 @@ export class PresenceChannel {
   public constructor(doc: Y.Doc, options: PresenceOptions) {
     this.awareness = new Awareness(doc)
     this.actorId = options.actorId
+    this.sessionId = String(this.awareness.clientID)
     this.timeoutMs = options.timeoutMs ?? 30_000
     this.now = options.now ?? Date.now
     this.awareness.on('change', this.handleAwarenessChange)
@@ -59,9 +61,10 @@ export class PresenceChannel {
   ): void {
     this.localPresence = presence
     this.localSequence += 1
-    this.knownSequences.set(this.actorId, this.localSequence)
+    this.knownSequences.set(this.sessionId, this.localSequence)
     this.awareness.setLocalState({
       actorId: this.actorId,
+      sessionId: this.sessionId,
       cursor: presence.cursor,
       selection: presence.selection,
       lastSeenAt: this.now(),
@@ -101,16 +104,18 @@ export class PresenceChannel {
       ) {
         return rawState
       }
-      const knownSequence = this.knownSequences.get(value.actorId)
+      const sessionId = this.getSessionId(value)
+      const knownSequence = this.knownSequences.get(sessionId)
       if (
         knownSequence === undefined ||
         value.sequence > knownSequence
       ) {
         return rawState
       }
-      return this.findStateByActorId(value.actorId)
+      return this.findStateBySessionId(sessionId)
     })
     applyAwarenessUpdate(this.awareness, filteredUpdate, origin)
+    this.pruneKnownSequences()
     for (const state of this.awareness.getStates().values()) {
       if (
         state &&
@@ -118,10 +123,11 @@ export class PresenceChannel {
         typeof state.actorId === 'string' &&
         typeof state.sequence === 'number'
       ) {
+        const sessionId = this.getSessionId(state)
         this.knownSequences.set(
-          state.actorId,
+          sessionId,
           Math.max(
-            this.knownSequences.get(state.actorId) ?? 0,
+            this.knownSequences.get(sessionId) ?? 0,
             state.sequence,
           ),
         )
@@ -147,14 +153,16 @@ export class PresenceChannel {
     const expiredClientIds = Array.from(this.awareness.getStates()).flatMap(
       ([clientId, state]) => {
         const snapshot = this.toSnapshot(state)
-        return snapshot && this.now() - snapshot.lastSeenAt > this.timeoutMs
-          ? [clientId]
-          : []
+        if (snapshot && this.now() - snapshot.lastSeenAt > this.timeoutMs) {
+          return [clientId]
+        }
+        return []
       },
     )
     if (expiredClientIds.length > 0) {
       removeAwarenessStates(this.awareness, expiredClientIds, this)
     }
+    this.pruneKnownSequences()
   }
 
   public destroy(): void {
@@ -190,6 +198,9 @@ export class PresenceChannel {
     }
     return {
       actorId: value.actorId,
+      ...(typeof value.sessionId === 'string'
+        ? { sessionId: value.sessionId }
+        : {}),
       cursor: value.cursor ?? null,
       selection: value.selection ?? null,
       lastSeenAt: value.lastSeenAt,
@@ -199,16 +210,34 @@ export class PresenceChannel {
     }
   }
 
-  private findStateByActorId(actorId: string): unknown {
+  private findStateBySessionId(sessionId: string): unknown {
     for (const state of this.awareness.getStates().values()) {
       if (
         state &&
         typeof state === 'object' &&
-        (state as Partial<PresenceSnapshot>).actorId === actorId
+        this.getSessionId(state) === sessionId
       ) {
         return state
       }
     }
     return null
+  }
+
+  private getSessionId(state: Partial<PresenceSnapshot>): string {
+    return state.sessionId ?? state.actorId ?? ''
+  }
+
+  private pruneKnownSequences(): void {
+    const activeSessions = new Set<string>()
+    for (const state of this.awareness.getStates().values()) {
+      if (state && typeof state === 'object') {
+        activeSessions.add(this.getSessionId(state))
+      }
+    }
+    for (const sessionId of this.knownSequences.keys()) {
+      if (!activeSessions.has(sessionId)) {
+        this.knownSequences.delete(sessionId)
+      }
+    }
   }
 }
