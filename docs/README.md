@@ -14,7 +14,8 @@ Aether 是协同智能的介质：承载人、Entity、代码与上下文共存�
 | [roadmap/data-model.md](./roadmap/data-model.md) | 核心数据模型与隔离策略草案 | 6 |
 | [roadmap/milestones.md](./roadmap/milestones.md) | M0–M3 里程碑与任务清单 | 7 |
 | [roadmap/risks.md](./roadmap/risks.md) | 关键技术风险、监控指标与降级方案 | 8 |
-| [roadmap/team-norms.md](./roadmap/team-norms.md) | 团队协作规范与检查清单 | 9 |
+| [roadmap/probes/yjs-serverless.md](./roadmap/probes/yjs-serverless.md) | Yjs Serverless 持久化与连接管理技术探测报告 | 9 |
+| [roadmap/team-norms.md](./roadmap/team-norms.md) | 团队协作规范与检查清单 | 10 |
 
 ## 阅读顺序
 
