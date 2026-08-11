@@ -6,10 +6,18 @@ import {
   applyDocUpdate,
   createDoc,
   destroyDoc,
+  diffDocUpdate,
+  encodeDocStateVector,
   encodeDocUpdate,
   getPartition,
   subscribeDocUpdates,
 } from './yjs-adapter.js'
+import {
+  deserializeStateVector,
+  deserializeUpdate,
+  serializeStateVector,
+  serializeUpdate,
+} from './serialization.js'
 import type { ProviderMessage, ProviderTransport } from './transport.js'
 import type * as Y from 'yjs'
 
@@ -28,6 +36,15 @@ export type ConnectionStateListener = (
 ) => void
 
 const REMOTE_ORIGIN = Symbol('remote-update')
+const HANDSHAKE_ERROR = 'Provider handshake was interrupted'
+
+type LocalPresence = Pick<PresenceSnapshot, 'cursor' | 'selection'>
+
+interface PendingHandshake {
+  requestId: string
+  resolve: () => void
+  reject: (error: unknown) => void
+}
 
 export class YjsProvider {
   public readonly doc: Y.Doc
@@ -37,6 +54,11 @@ export class YjsProvider {
   private readonly stateListeners = new Set<ConnectionStateListener>()
   private readonly transport: ProviderTransport
   private readonly stopDocUpdates: () => void
+  private readonly respondedHandshakeRequests = new Set<string>()
+  private pendingHandshake: PendingHandshake | null = null
+  private connectionPromise: Promise<void> | null = null
+  private handshakeSequence = 0
+  private localPresence: LocalPresence | null = null
 
   public constructor(options: ProviderOptions) {
     this.doc = options.doc ?? createDoc()
@@ -54,26 +76,54 @@ export class YjsProvider {
   }
 
   public async connect(): Promise<void> {
-    if (this.state !== 'disconnected') {
+    if (this.state === 'connected') {
+      return
+    }
+    if (this.state === 'connecting') {
+      await this.connectionPromise
       return
     }
     this.setState('connecting')
-    await this.transport.connect(this.handleMessage)
-    this.transport.send({ kind: 'document', payload: encodeDocUpdate(this.doc) })
-    this.transport.send({ kind: 'presence', payload: this.presence.encodeUpdate() })
-    this.setState('connected')
+    this.respondedHandshakeRequests.clear()
+    const requestId = this.createHandshakeRequestId()
+    const connectionPromise = new Promise<void>((resolve, reject) => {
+      this.pendingHandshake = { requestId, resolve, reject }
+    })
+    this.connectionPromise = connectionPromise
+
+    try {
+      await this.transport.connect(this.handleMessage)
+      this.transport.send({
+        kind: 'sync-state-vector',
+        requestId,
+        payload: serializeStateVector(encodeDocStateVector(this.doc)),
+      })
+    } catch (error) {
+      this.failHandshake(error)
+      this.setState('disconnected')
+      return connectionPromise
+    }
+
+    await connectionPromise
+  }
+
+  public async reconnect(): Promise<void> {
+    this.disconnect()
+    await this.connect()
   }
 
   public disconnect(): void {
     if (this.state === 'disconnected') {
       return
     }
+    this.failHandshake(new Error(HANDSHAKE_ERROR))
     this.presence.clearLocalPresence()
     this.transport.send({
       kind: 'presence',
       payload: this.presence.encodeUpdate([this.presence.getLocalClientId()]),
     })
     this.transport.disconnect()
+    this.respondedHandshakeRequests.clear()
     this.setState('disconnected')
   }
 
@@ -86,6 +136,7 @@ export class YjsProvider {
   public setLocalPresence(
     presence: Pick<PresenceSnapshot, 'cursor' | 'selection'>,
   ): void {
+    this.localPresence = presence
     this.presence.setLocalPresence(presence)
     if (this.state === 'connected') {
       this.transport.send({
@@ -119,9 +170,74 @@ export class YjsProvider {
   private readonly handleMessage = (message: ProviderMessage): void => {
     if (message.kind === 'document') {
       applyDocUpdate(this.doc, message.payload, REMOTE_ORIGIN)
-    } else {
-      this.presence.applyUpdate(message.payload, REMOTE_ORIGIN)
+      return
     }
+    if (message.kind === 'presence') {
+      this.presence.applyUpdate(message.payload, REMOTE_ORIGIN)
+      return
+    }
+    if (message.kind === 'sync-state-vector') {
+      this.respondToStateVector(message)
+      return
+    }
+    const update = deserializeUpdate(message.payload)
+    applyDocUpdate(this.doc, update, REMOTE_ORIGIN)
+    if (this.pendingHandshake?.requestId === message.requestId) {
+      this.completeHandshake()
+    }
+  }
+
+  private respondToStateVector(
+    message: Extract<ProviderMessage, { kind: 'sync-state-vector' }>,
+  ): void {
+    if (this.respondedHandshakeRequests.has(message.requestId)) {
+      return
+    }
+    this.respondedHandshakeRequests.add(message.requestId)
+    const stateVector = deserializeStateVector(message.payload)
+    const update = diffDocUpdate(encodeDocUpdate(this.doc), stateVector)
+    this.transport.send({
+      kind: 'sync-update',
+      requestId: message.requestId,
+      payload: serializeUpdate(update),
+    })
+  }
+
+  private completeHandshake(): void {
+    const pending = this.pendingHandshake
+    if (!pending) {
+      return
+    }
+    this.pendingHandshake = null
+    this.connectionPromise = null
+    this.setState('connected')
+    this.replayLocalPresence()
+    pending.resolve()
+  }
+
+  private failHandshake(error: unknown): void {
+    const pending = this.pendingHandshake
+    this.pendingHandshake = null
+    this.connectionPromise = null
+    if (pending) {
+      pending.reject(error)
+    }
+  }
+
+  private replayLocalPresence(): void {
+    if (!this.localPresence) {
+      return
+    }
+    this.presence.setLocalPresence(this.localPresence)
+    this.transport.send({
+      kind: 'presence',
+      payload: this.presence.encodeUpdate(),
+    })
+  }
+
+  private createHandshakeRequestId(): string {
+    this.handshakeSequence += 1
+    return `${this.doc.clientID}:${this.handshakeSequence}`
   }
 
   private setState(state: ProviderConnectionState): void {

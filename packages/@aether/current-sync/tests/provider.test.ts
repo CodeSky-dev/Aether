@@ -1,5 +1,31 @@
 import { describe, expect, it } from 'vitest'
-import { createLoopbackTransportPair, YjsProvider } from '../src/index.js'
+import {
+  appendPartitionText,
+  applyDocUpdate,
+  createLoopbackTransportPair,
+  deserializeUpdate,
+  encodeDocUpdate,
+  type ProviderMessage,
+  type ProviderTransport,
+  YjsProvider,
+} from '../src/index.js'
+
+function recordMessages(
+  transport: ProviderTransport,
+): { transport: ProviderTransport; messages: ProviderMessage[] } {
+  const messages: ProviderMessage[] = []
+  return {
+    messages,
+    transport: {
+      connect: (handler) => transport.connect(handler),
+      send: (message) => {
+        messages.push(message)
+        transport.send(message)
+      },
+      disconnect: () => transport.disconnect(),
+    },
+  }
+}
 
 describe('@aether/current-sync', () => {
   it('通过 loopback 让两个 Provider 收敛同一个 Y.Doc', async () => {
@@ -45,6 +71,143 @@ describe('@aether/current-sync', () => {
     expect(secondPresence.at(-1)).toEqual(['second'])
     second.destroy()
     first.destroy()
+  })
+
+  it('双方离线编辑后通过重连握手收敛', async () => {
+    const [firstTransport, secondTransport] = createLoopbackTransportPair()
+    const first = new YjsProvider({ actorId: 'first', transport: firstTransport })
+    const second = new YjsProvider({
+      actorId: 'second',
+      transport: secondTransport,
+    })
+
+    await Promise.all([first.connect(), second.connect()])
+    appendPartitionText(first.doc, 'code', 'file', 'shared-base;')
+    first.disconnect()
+    second.disconnect()
+    appendPartitionText(first.doc, 'code', 'file', 'first-offline;')
+    appendPartitionText(second.doc, 'code', 'file', 'second-offline;')
+
+    await Promise.all([first.reconnect(), second.reconnect()])
+
+    expect(first.getPartition('code').get('file')?.toString()).toContain(
+      'first-offline;',
+    )
+    expect(first.getPartition('code').get('file')?.toString()).toContain(
+      'second-offline;',
+    )
+    expect(second.getPartition('code').get('file')?.toString()).toBe(
+      first.getPartition('code').get('file')?.toString(),
+    )
+    first.destroy()
+    second.destroy()
+  })
+
+  it('握手只回传缺失增量，重复 connect 不产生额外握手消息', async () => {
+    const [rawFirst, rawSecond] = createLoopbackTransportPair()
+    const firstTransport = recordMessages(rawFirst)
+    const secondTransport = recordMessages(rawSecond)
+    const first = new YjsProvider({
+      actorId: 'first',
+      transport: firstTransport.transport,
+    })
+    const second = new YjsProvider({
+      actorId: 'second',
+      transport: secondTransport.transport,
+    })
+
+    for (let index = 0; index < 500; index += 1) {
+      appendPartitionText(first.doc, 'code', 'file', `edit-${index};`)
+    }
+    const midpoint = encodeDocUpdate(first.doc)
+    // 将同一客户端的前半段状态复制给第二端，保留可计算的增量 state vector。
+    applyDocUpdate(second.doc, midpoint, Symbol('seed'))
+    for (let index = 500; index < 1_000; index += 1) {
+      appendPartitionText(first.doc, 'code', 'file', `edit-${index};`)
+    }
+
+    await Promise.all([first.connect(), second.connect()])
+    const messageCount = firstTransport.messages.length + secondTransport.messages.length
+    const firstStateVector = firstTransport.messages.find(
+      (message): message is Extract<ProviderMessage, { kind: 'sync-state-vector' }> =>
+        message.kind === 'sync-state-vector',
+    )
+    expect(firstStateVector).toBeDefined()
+    rawFirst.send(firstStateVector!)
+    expect(
+      firstTransport.messages.length + secondTransport.messages.length,
+    ).toBe(messageCount)
+    await Promise.all([first.connect(), second.connect()])
+    expect(
+      firstTransport.messages.length + secondTransport.messages.length,
+    ).toBe(messageCount)
+    const fullSnapshotBytes = encodeDocUpdate(first.doc).byteLength
+    const handshakeUpdates = [
+      ...firstTransport.messages,
+      ...secondTransport.messages,
+    ]
+      .filter(
+        (message): message is Extract<ProviderMessage, { kind: 'sync-update' }> =>
+          message.kind === 'sync-update',
+      )
+      .map((message) => deserializeUpdate(message.payload).byteLength)
+      .filter((byteLength) => byteLength > 0)
+    expect(handshakeUpdates.length).toBeGreaterThan(0)
+    expect(Math.min(...handshakeUpdates)).toBeLessThan(fullSnapshotBytes)
+
+    first.destroy()
+    second.destroy()
+  })
+
+  it('新实例重连后自动恢复 Presence', async () => {
+    const [firstTransport, secondTransport] = createLoopbackTransportPair()
+    const first = new YjsProvider({ actorId: 'first', transport: firstTransport })
+    const oldSecond = new YjsProvider({
+      actorId: 'second',
+      transport: secondTransport,
+    })
+    await Promise.all([first.connect(), oldSecond.connect()])
+    first.setLocalPresence({ cursor: null, selection: null })
+    expect(oldSecond.presence.getSnapshots()).toHaveLength(1)
+
+    first.disconnect()
+    oldSecond.disconnect()
+    oldSecond.destroy()
+    const newSecond = new YjsProvider({
+      actorId: 'second',
+      transport: secondTransport,
+    })
+    await Promise.all([first.reconnect(), newSecond.connect()])
+    expect(newSecond.presence.getSnapshots().map((item) => item.actorId)).toEqual(
+      ['first'],
+    )
+
+    first.destroy()
+    newSecond.destroy()
+  })
+
+  it('握手序列化版本不匹配时显式失败', async () => {
+    let handler: ((message: ProviderMessage) => void) | null = null
+    const transport: ProviderTransport = {
+      connect: (nextHandler) => {
+        handler = nextHandler
+      },
+      send: (message) => {
+        if (message.kind === 'sync-state-vector') {
+          handler?.({
+            kind: 'sync-state-vector',
+            requestId: 'invalid-version',
+            payload: JSON.stringify({ schemaVersion: 999, data: '' }),
+          })
+        }
+      },
+      disconnect: () => {},
+    }
+    const provider = new YjsProvider({ actorId: 'first', transport })
+    await expect(provider.connect()).rejects.toThrow(
+      'CRDT schema version mismatch',
+    )
+    provider.destroy()
   })
 
   it('淘汰超过超时窗口的 Presence', async () => {
