@@ -8,15 +8,15 @@ import {
   appendPartitionText,
   applyDocUpdate,
   createDoc,
+  createLoopbackTransportPair,
   destroyDoc,
   diffDocUpdate,
   encodeDocStateVector,
   encodeDocUpdate,
   readPartitionText,
   subscribeDocUpdates,
-} from '../src/yjs-adapter.js'
-import { YjsProvider } from '../src/provider.js'
-import { createLoopbackTransportPair } from '../src/transport.js'
+  YjsProvider,
+} from '@aether/current-sync'
 
 const PROBE_ORIGIN = Symbol('serverless-probe')
 const SAMPLE_COUNT = 7

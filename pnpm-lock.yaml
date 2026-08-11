@@ -17,15 +17,9 @@ importers:
 
   apps/@aether/editor-host:
     dependencies:
-      '@aether/types':
+      '@aether/current-sync':
         specifier: workspace:*
-        version: link:../../../packages/@aether/types
-      y-protocols:
-        specifier: 1.0.6
-        version: 1.0.6(yjs@13.6.27)
-      yjs:
-        specifier: 13.6.27
-        version: 13.6.27
+        version: link:../../../packages/@aether/current-sync
     devDependencies:
       '@aether/config':
         specifier: workspace:*
@@ -94,6 +88,34 @@ importers:
       typescript-eslint:
         specifier: ^8.66.0
         version: 8.67.0(eslint@9.39.5(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
+
+  packages/@aether/current-sync:
+    dependencies:
+      '@aether/types':
+        specifier: workspace:*
+        version: link:../types
+      y-protocols:
+        specifier: 1.0.6
+        version: 1.0.6(yjs@13.6.27)
+      yjs:
+        specifier: 13.6.27
+        version: 13.6.27
+    devDependencies:
+      '@aether/config':
+        specifier: workspace:*
+        version: link:../config
+      '@types/node':
+        specifier: ^26.2.0
+        version: 26.2.0
+      eslint:
+        specifier: ^9.39.5
+        version: 9.39.5(jiti@2.7.0)(supports-color@7.2.0)
+      typescript:
+        specifier: ^6.0.0
+        version: 6.0.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@26.2.0)(jiti@2.7.0)(lightningcss@1.33.0)(supports-color@7.2.0)(tsx@4.23.12)
 
   packages/@aether/db:
     dependencies:
@@ -1718,6 +1740,7 @@ packages:
   lib0@0.2.117:
     resolution: {integrity: sha512-DeXj9X5xDCjgKLU/7RR+/HQEVzuuEUiwldwOGsHK/sfAfELGWEyTcf0x+uOvCvK3O2zPmZePXWL85vtia6GyZw==}
     engines: {node: '>=16'}
+    hasBin: true
 
   lightningcss-android-arm64@1.32.0:
     resolution: {integrity: sha512-YK7/ClTt4kAK0vo6w3X+Pnm0D2cf2vPHbhOXdoNti1Ga0al1P4TBZhwjATvjNwLEBCnKvjJc2jQgHXH0NEwlAg==}
@@ -2072,6 +2095,7 @@ packages:
   typescript@6.0.3:
     resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
     engines: {node: '>=14.17'}
+    hasBin: true
 
   undici-types@8.3.0:
     resolution: {integrity: sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ==}

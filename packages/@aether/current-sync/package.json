@@ -1,7 +1,7 @@
 {
-  "name": "@aether/editor-host",
+  "name": "@aether/current-sync",
   "version": "0.0.1",
-  "description": "Aether 编辑器宿主的 Current 渲染层与 Drift 持久化入口。",
+  "description": "Aether Current 的 Realm 分区、Yjs Provider、Presence 与 Converge 基础能力。",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -13,23 +13,25 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "vite build",
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run",
-    "probe": "tsx probes/serverless.ts"
+    "test": "vitest run"
   },
   "dependencies": {
-    "@aether/current-sync": "workspace:*"
+    "@aether/types": "workspace:*",
+    "y-protocols": "1.0.6",
+    "yjs": "13.6.27"
   },
   "devDependencies": {
     "@aether/config": "workspace:*",
+    "@types/node": "^26.2.0",
     "eslint": "^9.39.5",
-    "tsx": "^4.23.11",
     "typescript": "^6.0.0",
-    "vite": "^8.2.1",
     "vitest": "^3.2.4"
   }
 }

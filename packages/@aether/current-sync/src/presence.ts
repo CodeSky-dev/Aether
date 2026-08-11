@@ -1,4 +1,4 @@
-// @aether/editor-host · Presence 通道。
+// @aether/current-sync · Presence 通道。
 import type { PresenceSnapshot } from '@aether/types'
 import {
   applyAwarenessUpdate,

@@ -1,4 +1,4 @@
-// @aether/editor-host · 裸 Yjs API 的唯一适配层。
+// @aether/current-sync · 裸 Yjs API 的唯一适配层。
 import type { YDocPartitionKey } from '@aether/types'
 import * as Y from 'yjs'
 

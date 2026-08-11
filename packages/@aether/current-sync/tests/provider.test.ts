@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { YjsProvider } from '../src/index.js'
-import { createLoopbackTransportPair } from '../src/transport.js'
+import { createLoopbackTransportPair, YjsProvider } from '../src/index.js'
 
-describe('@aether/editor-host', () => {
+describe('@aether/current-sync', () => {
   it('通过 loopback 让两个 Provider 收敛同一个 Y.Doc', async () => {
     const [firstTransport, secondTransport] = createLoopbackTransportPair()
     const first = new YjsProvider({ actorId: 'first', transport: firstTransport })
