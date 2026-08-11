@@ -24,7 +24,6 @@ export class PresenceChannel {
   private readonly timeoutMs: number
   private readonly now: () => number
   private readonly listeners = new Set<PresenceChangeListener>()
-  private readonly clientActors = new Map<number, string>()
   private readonly sweepTimer: ReturnType<typeof setInterval>
 
   public constructor(doc: Y.Doc, options: PresenceOptions) {
@@ -33,10 +32,19 @@ export class PresenceChannel {
     this.timeoutMs = options.timeoutMs ?? 30_000
     this.now = options.now ?? Date.now
     this.awareness.on('change', this.handleAwarenessChange)
-    this.sweepTimer = setInterval(
+    const sweepTimer = setInterval(
       () => this.sweepExpired(),
       Math.max(1, Math.min(this.timeoutMs, 1_000)),
     )
+    if (
+      typeof sweepTimer === 'object' &&
+      sweepTimer !== null &&
+      'unref' in sweepTimer &&
+      typeof sweepTimer.unref === 'function'
+    ) {
+      sweepTimer.unref()
+    }
+    this.sweepTimer = sweepTimer
   }
 
   public setLocalPresence(
@@ -105,11 +113,6 @@ export class PresenceChannel {
   }
 
   private readonly handleAwarenessChange = (): void => {
-    for (const [clientId, state] of this.awareness.getStates()) {
-      if (state && typeof state.actorId === 'string') {
-        this.clientActors.set(clientId, state.actorId)
-      }
-    }
     const snapshots = this.getSnapshots()
     for (const listener of this.listeners) {
       listener(snapshots)
