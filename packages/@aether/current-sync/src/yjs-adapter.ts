@@ -1,5 +1,8 @@
 // @aether/current-sync · 裸 Yjs API 的唯一适配层。
-import type { YDocPartitionKey } from '@aether/types'
+import {
+  YDOC_CONVERGE_METADATA_KEY,
+  type YDocPartitionKey,
+} from '@aether/types'
 import * as Y from 'yjs'
 
 export function createDoc(): Y.Doc {
@@ -85,8 +88,8 @@ export function writePartitionField<T extends YDocPartitionKey>(
   })
 }
 
-function getFieldMetadata(doc: Y.Doc): Y.Map<unknown> {
-  return doc.getMap('__aether_current_sync_field_metadata')
+function getFieldMetadata(doc: Y.Doc): Y.Map<number> {
+  return doc.getMap<number>(YDOC_CONVERGE_METADATA_KEY)
 }
 
 function fieldMetadataKey(
