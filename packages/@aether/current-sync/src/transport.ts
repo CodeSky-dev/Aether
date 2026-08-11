@@ -1,9 +1,32 @@
 // @aether/current-sync · 传输抽象与内存 loopback 实现。
 
-export interface ProviderMessage {
-  kind: 'document' | 'presence'
-  payload: Uint8Array
-}
+export type ProviderMessage =
+  | {
+      kind: 'document'
+      payload: Uint8Array
+    }
+  | {
+      kind: 'presence'
+      payload: Uint8Array
+    }
+  | {
+      kind: 'sync-state-vector'
+      requestId: string
+      payload: string
+    }
+  | {
+      kind: 'sync-update'
+      requestId: string
+      stage: 'response'
+      payload: string
+      stateVector: string
+    }
+  | {
+      kind: 'sync-update'
+      requestId: string
+      stage: 'final'
+      payload: string
+    }
 
 export type ProviderMessageHandler = (message: ProviderMessage) => void
 
@@ -32,15 +55,9 @@ class LoopbackTransport implements ProviderTransport {
       throw new Error('Loopback transport has no peer')
     }
     if (this.peer.connected && this.peer.handler) {
-      this.peer.handler({
-        kind: message.kind,
-        payload: message.payload.slice(),
-      })
+      this.peer.handler(cloneMessage(message))
     } else {
-      this.peer.queuedMessages.push({
-        kind: message.kind,
-        payload: message.payload.slice(),
-      })
+      this.peer.queuedMessages.push(cloneMessage(message))
     }
   }
 
@@ -52,6 +69,13 @@ class LoopbackTransport implements ProviderTransport {
   setPeer(peer: LoopbackTransport): void {
     this.peer = peer
   }
+}
+
+function cloneMessage(message: ProviderMessage): ProviderMessage {
+  if (message.kind === 'document' || message.kind === 'presence') {
+    return { kind: message.kind, payload: message.payload.slice() }
+  }
+  return { ...message }
 }
 
 /** 创建一对互相连接的内存传输，用于本地运行和测试。 */
