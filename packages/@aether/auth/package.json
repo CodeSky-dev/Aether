@@ -32,7 +32,7 @@
   "dependencies": {
     "@aether/db": "workspace:*",
     "@aether/types": "workspace:*",
-    "better-auth": "^1.6.26",
+    "better-auth": "1.6.26",
     "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {

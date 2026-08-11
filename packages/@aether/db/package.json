@@ -24,6 +24,8 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"
@@ -37,6 +39,7 @@
     "@types/node": "^26.2.0",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.39.5",
-    "typescript": "^6.0.0"
+    "typescript": "^6.0.0",
+    "vitest": "^3.2.4"
   }
 }

@@ -7,7 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
-  uniqueIndex,
+  index,
   uuid,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core'
@@ -66,7 +66,7 @@ export const realms = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [uniqueIndex('realms_slug_idx').on(t.slug)],
+  (t) => [index('realms_slug_idx').on(t.slug)],
 )
 
 // ---- projects（Realm 二级节点）----
@@ -89,7 +89,7 @@ export const projects = pgTable(
       .defaultNow(),
   },
   (t) => [
-    uniqueIndex('projects_realm_slug_idx').on(t.realm_id, t.slug),
+    index('projects_realm_slug_idx').on(t.realm_id, t.slug),
   ],
 )
 
@@ -116,11 +116,11 @@ export const members = pgTable(
       .defaultNow(),
   },
   (t) => [
-    uniqueIndex('members_actor_idx').on(t.realm_id, t.actor_type, t.actor_id),
+    index('members_actor_idx').on(t.realm_id, t.actor_type, t.actor_id),
     // 高频查询优化：按项目 + 角色筛选成员
-    uniqueIndex('members_project_role_idx').on(t.project_id, t.role),
+    index('members_project_role_idx').on(t.project_id, t.role),
     // 按状态筛选成员
-    uniqueIndex('members_status_idx').on(t.status),
+    index('members_status_idx').on(t.status),
   ],
 )
 
@@ -146,7 +146,7 @@ export const entities = pgTable(
       .defaultNow(),
   },
   (t) => [
-    uniqueIndex('entities_auth_identity_idx').on(t.auth_identity_id),
+    index('entities_auth_identity_idx').on(t.auth_identity_id),
   ],
 )
 
@@ -179,11 +179,11 @@ export const threads = pgTable(
       .defaultNow(),
   },
   (t) => [
-    uniqueIndex('threads_realm_created_idx').on(t.realm_id, t.created_at),
+    index('threads_realm_created_idx').on(t.realm_id, t.created_at),
     // 高频查询优化：按项目 + 状态筛选线程
-    uniqueIndex('threads_project_status_idx').on(t.project_id, t.status),
+    index('threads_project_status_idx').on(t.project_id, t.status),
     // 父子线程关系查询优化
-    uniqueIndex('threads_parent_idx').on(t.parent_thread_id),
+    index('threads_parent_idx').on(t.parent_thread_id),
   ],
 )
 
@@ -209,7 +209,7 @@ export const currents = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [uniqueIndex('currents_doc_ref_idx').on(t.doc_ref)],
+  (t) => [index('currents_doc_ref_idx').on(t.doc_ref)],
 )
 
 // ---- audit_log（审计轨迹：人类与 Entity 行为统一入账）----
@@ -233,11 +233,11 @@ export const auditLog = pgTable(
       .defaultNow(),
   },
   (t) => [
-    uniqueIndex('audit_log_idempotency_idx').on(t.idempotency_key),
-    uniqueIndex('audit_log_realm_created_idx').on(t.realm_id, t.created_at),
+    index('audit_log_idempotency_idx').on(t.idempotency_key),
+    index('audit_log_realm_created_idx').on(t.realm_id, t.created_at),
     // 高频查询优化：按 Actor + 动作筛选审计日志
-    uniqueIndex('audit_log_actor_action_idx').on(t.actor_type, t.actor_id, t.action),
+    index('audit_log_actor_action_idx').on(t.actor_type, t.actor_id, t.action),
     // 按时间范围查询优化
-    uniqueIndex('audit_log_action_created_idx').on(t.action, t.created_at),
+    index('audit_log_action_created_idx').on(t.action, t.created_at),
   ],
 )
