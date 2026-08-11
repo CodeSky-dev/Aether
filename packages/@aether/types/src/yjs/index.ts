@@ -26,10 +26,17 @@ export interface CodeDocumentState {
 
 export interface PresenceSnapshot {
   actorId: string
+  /** 当前 PresenceChannel 实例的会话标识；旧客户端缺省时保持兼容。 */
+  sessionId?: string
   cursor: { file: string; offset: number } | null
   selection: { file: string; start: number; end: number } | null
   lastSeenAt: number
+  /** 本 actor 的单调 Presence 序号；旧客户端缺省为未带序号。 */
+  sequence?: number
 }
+
+/** CRDT 文档结构版本契约，所有 Yjs 适配层共享此版本。 */
+export const CRDT_SCHEMA_VERSION = 1
 
 // ---- CRDT 分区类型（Y.Doc 顶层 key）----
 
@@ -48,3 +55,17 @@ export interface YDocPartitionMap {
 }
 
 export type YDocPartition<T extends YDocPartitionKey> = YDocPartitionMap[T]
+
+/** Current 汇合元数据的顶层 Y.Doc key，不属于业务分区。 */
+export const YDOC_CONVERGE_METADATA_KEY =
+  '__aether_current_sync_field_metadata' as const
+
+/** 汇合元数据：分区字段标识 → 该字段最近一次提交时钟。 */
+export interface YDocConvergeMetadata {
+  [fieldKey: string]: number
+}
+
+/** Y.Doc 顶层汇合元数据结构映射。 */
+export interface YDocMetadataMap {
+  [YDOC_CONVERGE_METADATA_KEY]: YDocConvergeMetadata
+}

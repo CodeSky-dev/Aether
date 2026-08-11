@@ -1,4 +1,4 @@
 {
   "extends": "@aether/config/tsconfig/node.json",
-  "include": ["src", "tests", "drizzle.config.ts"]
+  "include": ["src", "tests"]
 }

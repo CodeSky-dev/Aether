@@ -1,0 +1,37 @@
+{
+  "name": "@aether/current-sync",
+  "version": "0.0.1",
+  "description": "Aether Current 的 Realm 分区、Yjs Provider、Presence 与 Converge 基础能力。",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@aether/types": "workspace:*",
+    "y-protocols": "1.0.6",
+    "yjs": "13.6.27"
+  },
+  "devDependencies": {
+    "@aether/config": "workspace:*",
+    "@types/node": "^26.2.0",
+    "eslint": "^9.39.5",
+    "typescript": "^6.0.0",
+    "vitest": "^3.2.4"
+  }
+}

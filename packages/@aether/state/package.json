@@ -1,0 +1,37 @@
+{
+  "name": "@aether/state",
+  "version": "0.0.1",
+  "description": "Aether Current 的 Zustand 投影状态层。",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@aether/current-sync": "workspace:*",
+    "@aether/types": "workspace:*",
+    "zustand": "5.0.14"
+  },
+  "devDependencies": {
+    "@aether/config": "workspace:*",
+    "@types/node": "^26.2.0",
+    "eslint": "^9.39.5",
+    "typescript": "^6.0.0",
+    "vitest": "^3.2.4"
+  }
+}

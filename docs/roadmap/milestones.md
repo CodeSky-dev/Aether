@@ -27,9 +27,9 @@ graph LR
 - [x] `@aether/types`：共享类型与 schema 类型生成
 - [x] `@aether/db`：核心 schema + Drizzle Kit 迁移脚本
 - [x] `@aether/auth`：Better-Auth 三级模型（Realm > Project > Member）
-- [ ] `@aether/editor-host`：Yjs Provider 基线 + Presence 通道
-- [ ] CI 管线：build / lint / test / typecheck，remote cache 打通
-- [ ] 技术探测：Yjs 在 Serverless 环境的持久化与连接管理（见 [risks.md](./risks.md)）
+- [x] `@aether/editor-host`：Yjs Provider 基线 + Presence 通道
+- [x] CI 管线：build / lint / test / typecheck，remote cache 打通
+- [x] 技术探测：Yjs 在 Serverless 环境的持久化与连接管理（见 [risks.md](./risks.md)，详见 [探测报告](./probes/yjs-serverless.md)）
 
 **退出标准**：
 - 新成员 clone 后一条命令启动全栈。
@@ -48,14 +48,14 @@ graph LR
 
 **任务清单**：
 
-- [ ] `@aether/current-sync`：Realm Channel Partition 实现
-- [ ] Converge Engine：基础字段级冲突策略
+- [x] `@aether/current-sync`：Realm Channel Partition 实现
+- [x] Converge Engine：基础字段级冲突策略
 - [ ] Server Actions 状态通道：更新落库 + 广播
 - [ ] Hocuspocus 收敛服务接入
 - [ ] Drift Persistence：IndexedDB 持久化
-- [ ] Reconnect Handshake：增量对账
-- [ ] Cursor Wavefront：多光标渲染
-- [ ] `@aether/state`：Zustand store 与 Yjs 双向绑定
+- [x] Reconnect Handshake：增量对账
+- [x] Cursor Wavefront：多光标渲染
+- [x] `@aether/state`：Zustand store 与 Yjs 双向绑定
 
 **退出标准**：
 - 双客户端并发编辑无数据丢失。

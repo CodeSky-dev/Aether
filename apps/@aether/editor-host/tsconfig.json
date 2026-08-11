@@ -1,0 +1,4 @@
+{
+  "extends": "@aether/config/tsconfig/vite.json",
+  "include": ["src", "tests", "vite.config.ts"]
+}
