@@ -1,0 +1,162 @@
+{
+  "generatedAt": "2026-08-11T12:52:44.518Z",
+  "machine": {
+    "node": "v22.13.0",
+    "platform": "linux",
+    "arch": "x64",
+    "kernel": "5.15.200",
+    "cpu": "Intel(R) Xeon(R) Platinum 8375C CPU @ 2.90GHz",
+    "cpuCount": 2
+  },
+  "methodology": {
+    "sampleCount": 7,
+    "editValue": "Y.Text code.content 逐次追加编辑-N;",
+    "latencyClock": "node:perf_hooks performance.now()",
+    "p95": "线性插值百分位数",
+    "networkIncluded": false,
+    "databaseIncluded": false
+  },
+  "persistence": {
+    "fullSnapshot": {
+      "requestDuration": {
+        "medianMs": 0.1640304999999671,
+        "p95Ms": 0.23370209999994243
+      },
+      "store": {
+        "reads": 1000,
+        "readBytes": 5424557,
+        "writes": 1000,
+        "writeBytes": 5435482,
+        "appendedUpdates": 0,
+        "compactedSnapshots": 1000
+      }
+    },
+    "appendUpdates": [
+      {
+        "compactionEvery": 10,
+        "finalSnapshotBytes": 10925,
+        "pendingUpdates": 0,
+        "requestDuration": {
+          "medianMs": 0.12880150000000867,
+          "p95Ms": 0.21148129999995144
+        },
+        "store": {
+          "reads": 1001,
+          "readBytes": 5520595,
+          "writes": 1100,
+          "writeBytes": 578310,
+          "appendedUpdates": 1000,
+          "compactedSnapshots": 100
+        }
+      },
+      {
+        "compactionEvery": 50,
+        "finalSnapshotBytes": 10925,
+        "pendingUpdates": 0,
+        "requestDuration": {
+          "medianMs": 0.21009750000007443,
+          "p95Ms": 0.3442356500000866
+        },
+        "store": {
+          "reads": 1001,
+          "readBytes": 5898365,
+          "writes": 1020,
+          "writeBytes": 143911,
+          "appendedUpdates": 1000,
+          "compactedSnapshots": 20
+        }
+      },
+      {
+        "compactionEvery": 200,
+        "finalSnapshotBytes": 10925,
+        "pendingUpdates": 0,
+        "requestDuration": {
+          "medianMs": 0.538573499999984,
+          "p95Ms": 1.1239391500000917
+        },
+        "store": {
+          "reads": 1001,
+          "readBytes": 7313765,
+          "writes": 1005,
+          "writeBytes": 62486,
+          "appendedUpdates": 1000,
+          "compactedSnapshots": 5
+        }
+      }
+    ]
+  },
+  "sizeAndLatency": [
+    {
+      "updateCount": 100,
+      "fullSnapshotBytes": 1025,
+      "incrementalUpdateBytes": 2861,
+      "encodeStateAsUpdate": {
+        "medianMs": 0.013488000000052125,
+        "p95Ms": 0.01568490000006477
+      },
+      "applyUpdate": {
+        "medianMs": 0.01159300000017538,
+        "p95Ms": 0.015935300000114692
+      }
+    },
+    {
+      "updateCount": 1000,
+      "fullSnapshotBytes": 10925,
+      "incrementalUpdateBytes": 29861,
+      "encodeStateAsUpdate": {
+        "medianMs": 0.0567390000001069,
+        "p95Ms": 0.06696509999999306
+      },
+      "applyUpdate": {
+        "medianMs": 0.03938500000003842,
+        "p95Ms": 0.0551927999998952
+      }
+    },
+    {
+      "updateCount": 10000,
+      "fullSnapshotBytes": 118924,
+      "incrementalUpdateBytes": 304487,
+      "encodeStateAsUpdate": {
+        "medianMs": 0.2871860000000197,
+        "p95Ms": 0.33645880000008216
+      },
+      "applyUpdate": {
+        "medianMs": 0.4330689999999322,
+        "p95Ms": 0.47133610000005316
+      }
+    }
+  ],
+  "reconnect": {
+    "staleUpdateCount": 500,
+    "fullSnapshotBytes": 10925,
+    "diffUpdateBytes": 5520,
+    "savedBytes": 5405,
+    "convergedContentLength": 6890,
+    "convergedContentSuffix": "-998;编辑-999;"
+  },
+  "presence": {
+    "seenBeforeDisconnect": [
+      "probe-client"
+    ],
+    "withoutReplay": [],
+    "afterClientReplay": [
+      "probe-client"
+    ],
+    "requiresClientReplay": true
+  },
+  "coldStart": {
+    "requestCount": 100,
+    "duration": {
+      "medianMs": 0.09611850000010236,
+      "p95Ms": 0.10980034999995494
+    },
+    "store": {
+      "reads": 100,
+      "readBytes": 52007,
+      "writes": 100,
+      "writeBytes": 53032,
+      "appendedUpdates": 0,
+      "compactedSnapshots": 100
+    }
+  }
+}
