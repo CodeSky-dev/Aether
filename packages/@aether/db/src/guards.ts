@@ -21,7 +21,12 @@ type RealmTableName = (typeof REALM_TABLES)[number]
 /** 获取表的符号名称（兼容 Drizzle 内部实现） */
 function getTableName(table: Table): string {
   const symbolName = Symbol.for('drizzle:Name')
-  return ((table as any)[symbolName] || (table as any)['name']) as string
+  const candidate = table as unknown as {
+    [key: symbol]: unknown
+    name?: unknown
+  }
+  const name = candidate[symbolName] ?? candidate.name
+  return typeof name === 'string' ? name : ''
 }
 
 /**
@@ -59,7 +64,9 @@ export function realmGuard(table: Table, realmId: string): SQL {
   }
 
   // 获取 realm_id 列并生成条件
-  const realmCol = (table as any).realm_id
+  const realmCol = (
+    table as unknown as { realm_id?: Parameters<typeof eq>[0] }
+  ).realm_id
   if (!realmCol) {
     throw new Error(
       `Table "${tableName}" is missing the "realm_id" column. ` +

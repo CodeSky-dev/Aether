@@ -27,8 +27,8 @@ graph LR
 - [x] `@aether/types`：共享类型与 schema 类型生成
 - [x] `@aether/db`：核心 schema + Drizzle Kit 迁移脚本
 - [x] `@aether/auth`：Better-Auth 三级模型（Realm > Project > Member）
-- [ ] `@aether/editor-host`：Yjs Provider 基线 + Presence 通道
-- [ ] CI 管线：build / lint / test / typecheck，remote cache 打通
+- [x] `@aether/editor-host`：Yjs Provider 基线 + Presence 通道
+- [x] CI 管线：build / lint / test / typecheck，remote cache 打通
 - [ ] 技术探测：Yjs 在 Serverless 环境的持久化与连接管理（见 [risks.md](./risks.md)）
 
 **退出标准**：

@@ -1,5 +1,6 @@
 packages:
   - 'apps/*'
+  - 'apps/@aether/*'
   - 'packages/*'
   - 'packages/@aether/*'
 

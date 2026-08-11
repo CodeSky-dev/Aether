@@ -31,6 +31,9 @@ export interface PresenceSnapshot {
   lastSeenAt: number
 }
 
+/** CRDT 文档结构版本契约，所有 Yjs 适配层共享此版本。 */
+export const CRDT_SCHEMA_VERSION = 1
+
 // ---- CRDT 分区类型（Y.Doc 顶层 key）----
 
 export type YDocPartitionKey =
