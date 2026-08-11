@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   appendPartitionText,
   applyDocUpdate,
@@ -35,6 +35,10 @@ function recordMessages(
 }
 
 describe('@aether/current-sync', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('通过 loopback 让两个 Provider 收敛同一个 Y.Doc', async () => {
     const [firstTransport, secondTransport] = createLoopbackTransportPair()
     const first = new YjsProvider({ actorId: 'first', transport: firstTransport })
@@ -346,6 +350,180 @@ describe('@aether/current-sync', () => {
     expect(second.presence.getSnapshots()).toHaveLength(0)
 
     first.destroy()
+    second.destroy()
+  })
+
+  it('波前窗口内合并多次 Presence，广播最后一次意图', async () => {
+    vi.useFakeTimers()
+    const [rawFirst, rawSecond] = createLoopbackTransportPair()
+    const firstTransport = recordMessages(rawFirst)
+    const secondTransport = recordMessages(rawSecond)
+    const first = new YjsProvider({
+      actorId: 'first',
+      transport: firstTransport.transport,
+      presenceThrottleMs: 50,
+    })
+    const second = new YjsProvider({
+      actorId: 'second',
+      transport: secondTransport.transport,
+      presenceThrottleMs: 50,
+    })
+
+    await Promise.all([first.connect(), second.connect()])
+    first.setLocalPresence({ cursor: { file: 'a.ts', offset: 1 }, selection: null })
+    first.setLocalPresence({ cursor: { file: 'a.ts', offset: 2 }, selection: null })
+    first.setLocalPresence({ cursor: { file: 'a.ts', offset: 3 }, selection: null })
+
+    const presenceMessages = (): ProviderMessage[] =>
+      firstTransport.messages.filter((message) => message.kind === 'presence')
+    expect(presenceMessages()).toHaveLength(1)
+    expect(second.presence.getSnapshots()[0]?.cursor?.offset).toBe(1)
+    vi.advanceTimersByTime(49)
+    expect(presenceMessages()).toHaveLength(1)
+    vi.advanceTimersByTime(1)
+    expect(presenceMessages()).toHaveLength(2)
+    expect(second.presence.getSnapshots()[0]?.cursor?.offset).toBe(3)
+    expect(second.presence.getSnapshots()[0]?.sequence).toBe(3)
+    vi.advanceTimersByTime(100)
+    expect(presenceMessages()).toHaveLength(2)
+
+    first.destroy()
+    second.destroy()
+  })
+
+  it('静止时停止普通广播，但按心跳发送 Presence', async () => {
+    vi.useFakeTimers()
+    const [rawFirst, rawSecond] = createLoopbackTransportPair()
+    const firstTransport = recordMessages(rawFirst)
+    const secondTransport = recordMessages(rawSecond)
+    const first = new YjsProvider({
+      actorId: 'first',
+      transport: firstTransport.transport,
+      timeoutMs: 300,
+      presenceHeartbeatMs: 100,
+    })
+    const second = new YjsProvider({
+      actorId: 'second',
+      transport: secondTransport.transport,
+      timeoutMs: 300,
+      presenceHeartbeatMs: 100,
+    })
+
+    await Promise.all([first.connect(), second.connect()])
+    first.setLocalPresence({ cursor: { file: 'a.ts', offset: 1 }, selection: null })
+    const presenceMessages = (): ProviderMessage[] =>
+      firstTransport.messages.filter((message) => message.kind === 'presence')
+    expect(presenceMessages()).toHaveLength(1)
+    vi.advanceTimersByTime(99)
+    expect(presenceMessages()).toHaveLength(1)
+    vi.advanceTimersByTime(1)
+    expect(presenceMessages()).toHaveLength(2)
+    vi.advanceTimersByTime(100)
+    expect(presenceMessages()).toHaveLength(3)
+    expect(second.presence.getSnapshots()[0]?.sequence).toBe(3)
+
+    first.destroy()
+    second.destroy()
+  })
+
+  it('按 actor 序号丢弃乱序旧 Presence，接受更新序号', () => {
+    const source = new YjsProvider({
+      actorId: 'source',
+      transport: createLoopbackTransportPair()[0],
+    })
+    const receiver = new YjsProvider({
+      actorId: 'receiver',
+      transport: createLoopbackTransportPair()[0],
+    })
+    source.setLocalPresence({
+      cursor: { file: 'a.ts', offset: 1 },
+      selection: null,
+    })
+    const firstUpdate = source.presence.encodeUpdate()
+    source.setLocalPresence({
+      cursor: { file: 'a.ts', offset: 2 },
+      selection: null,
+    })
+    const secondUpdate = source.presence.encodeUpdate()
+
+    receiver.presence.applyUpdate(secondUpdate, Symbol('test'))
+    receiver.presence.applyUpdate(firstUpdate, Symbol('test'))
+    expect(receiver.presence.getSnapshots()[0]?.cursor?.offset).toBe(2)
+    expect(receiver.presence.getSnapshots()[0]?.sequence).toBe(2)
+
+    source.setLocalPresence({
+      cursor: { file: 'a.ts', offset: 3 },
+      selection: null,
+    })
+    receiver.presence.applyUpdate(source.presence.encodeUpdate(), Symbol('test'))
+    expect(receiver.presence.getSnapshots()[0]?.cursor?.offset).toBe(3)
+    expect(receiver.presence.getSnapshots()[0]?.sequence).toBe(3)
+    source.destroy()
+    receiver.destroy()
+  })
+
+  it('未连接时不广播也不堆积 Presence，连接后只重播最新意图', async () => {
+    vi.useFakeTimers()
+    const [rawFirst, rawSecond] = createLoopbackTransportPair()
+    const firstTransport = recordMessages(rawFirst)
+    const secondTransport = recordMessages(rawSecond)
+    const first = new YjsProvider({
+      actorId: 'first',
+      transport: firstTransport.transport,
+      presenceThrottleMs: 50,
+    })
+    const second = new YjsProvider({
+      actorId: 'second',
+      transport: secondTransport.transport,
+      presenceThrottleMs: 50,
+    })
+    first.setLocalPresence({ cursor: { file: 'a.ts', offset: 1 }, selection: null })
+    first.setLocalPresence({ cursor: { file: 'a.ts', offset: 2 }, selection: null })
+    vi.advanceTimersByTime(500)
+    expect(
+      firstTransport.messages.filter((message) => message.kind === 'presence'),
+    ).toHaveLength(0)
+
+    await Promise.all([first.connect(), second.connect()])
+    expect(second.presence.getSnapshots()[0]?.cursor?.offset).toBe(2)
+    expect(second.presence.getSnapshots()[0]?.sequence).toBe(3)
+    expect(
+      firstTransport.messages.filter((message) => message.kind === 'presence'),
+    ).toHaveLength(1)
+
+    first.destroy()
+    second.destroy()
+  })
+
+  it('重连后重播最新 Presence 并递增序号，destroy 后不再发送', async () => {
+    vi.useFakeTimers()
+    const [rawFirst, rawSecond] = createLoopbackTransportPair()
+    const firstTransport = recordMessages(rawFirst)
+    const secondTransport = recordMessages(rawSecond)
+    const first = new YjsProvider({
+      actorId: 'first',
+      transport: firstTransport.transport,
+      presenceThrottleMs: 50,
+    })
+    const second = new YjsProvider({
+      actorId: 'second',
+      transport: secondTransport.transport,
+      presenceThrottleMs: 50,
+    })
+
+    await Promise.all([first.connect(), second.connect()])
+    first.setLocalPresence({ cursor: { file: 'a.ts', offset: 1 }, selection: null })
+    first.setLocalPresence({ cursor: { file: 'a.ts', offset: 2 }, selection: null })
+    first.disconnect()
+    second.disconnect()
+    await Promise.all([first.reconnect(), second.reconnect()])
+    expect(second.presence.getSnapshots()[0]?.cursor?.offset).toBe(2)
+    expect(second.presence.getSnapshots()[0]?.sequence).toBe(3)
+
+    first.destroy()
+    const sentAfterDestroy = firstTransport.messages.length
+    vi.advanceTimersByTime(100_000)
+    expect(firstTransport.messages.length).toBe(sentAfterDestroy)
     second.destroy()
   })
 })
