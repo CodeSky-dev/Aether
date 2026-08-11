@@ -16,15 +16,15 @@ describe('@aether/editor-host serverless probe', () => {
     expect(result.reconnect.convergedContentSuffix).toContain('编辑-99;')
   })
 
-  it('验证无状态 Presence 必须由客户端重播', async () => {
+  it('验证无状态 Presence 重连后由 replayLocalPresence 自动恢复', async () => {
     const result = await runServerlessProbe({
       persistenceEditCount: 10,
       latencyEditCounts: [10],
       coldStartRequestCount: 2,
     })
     expect(result.presence.seenBeforeDisconnect).toContain('probe-client')
-    expect(result.presence.withoutReplay).toEqual([])
+    expect(result.presence.withoutReplay).toContain('probe-client')
     expect(result.presence.afterClientReplay).toContain('probe-client')
-    expect(result.presence.requiresClientReplay).toBe(true)
+    expect(result.presence.requiresClientReplay).toBe(false)
   })
 })

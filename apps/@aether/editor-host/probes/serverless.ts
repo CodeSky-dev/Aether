@@ -315,10 +315,13 @@ export async function runPresenceProbe() {
     actorId: 'probe-server',
     transport: freshServerTransport,
   })
+  // 先设置 local presence 再 connect，模拟真实重连场景（客户端保有本地状态，连接后由 replayLocalPresence 自动恢复）
+  reconnectedClient.setLocalPresence({ cursor: null, selection: null })
   await Promise.all([reconnectedClient.connect(), freshServer.connect()])
   const withoutReplay = freshServer.presence.getSnapshots().map(
     (snapshot) => snapshot.actorId,
   )
+  // 验证显式重发后依然可见
   reconnectedClient.setLocalPresence({ cursor: null, selection: null })
   const afterReplay = freshServer.presence.getSnapshots().map(
     (snapshot) => snapshot.actorId,

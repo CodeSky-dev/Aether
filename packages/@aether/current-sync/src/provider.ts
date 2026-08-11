@@ -56,6 +56,7 @@ export class YjsProvider {
   public readonly doc: Y.Doc
   public readonly presence: PresenceChannel
   public readonly schemaVersion = CRDT_SCHEMA_VERSION
+  private readonly ownsDoc: boolean
   private state: ProviderConnectionState = 'disconnected'
   private readonly stateListeners = new Set<ConnectionStateListener>()
   private readonly transport: ProviderTransport
@@ -100,6 +101,7 @@ export class YjsProvider {
         'presenceHeartbeatMs must be positive and less than timeoutMs',
       )
     }
+    this.ownsDoc = options.doc === undefined
     this.doc = options.doc ?? createDoc()
     this.transport = options.transport
     this.handshakeTimeoutMs = options.handshakeTimeoutMs ?? 10_000
@@ -236,7 +238,9 @@ export class YjsProvider {
     this.disconnect()
     this.stopDocUpdates()
     this.presence.destroy()
-    destroyDoc(this.doc)
+    if (this.ownsDoc) {
+      destroyDoc(this.doc)
+    }
   }
 
   private readonly handleMessage = (message: ProviderMessage): void => {
