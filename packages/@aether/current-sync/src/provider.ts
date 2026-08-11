@@ -1,4 +1,4 @@
-// @aether/editor-host · 传输无关的 Yjs Provider 基线。
+// @aether/current-sync · 传输无关的 Yjs Provider 基线。
 import type { PresenceSnapshot, YDocPartitionKey } from '@aether/types'
 import { CRDT_SCHEMA_VERSION } from '@aether/types'
 import { PresenceChannel, type PresenceOptions } from './presence.js'

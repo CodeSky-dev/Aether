@@ -1,5 +1,8 @@
-// @aether/editor-host · 裸 Yjs API 的唯一适配层。
-import type { YDocPartitionKey } from '@aether/types'
+// @aether/current-sync · 裸 Yjs API 的唯一适配层。
+import {
+  YDOC_CONVERGE_METADATA_KEY,
+  type YDocPartitionKey,
+} from '@aether/types'
 import * as Y from 'yjs'
 
 export function createDoc(): Y.Doc {
@@ -64,6 +67,56 @@ export function readPartitionText<T extends YDocPartitionKey>(
     return value.toJSON()
   }
   return typeof value === 'string' ? value : ''
+}
+
+export function readPartitionField<T extends YDocPartitionKey>(
+  doc: Y.Doc,
+  key: T,
+  field: string,
+): unknown {
+  return getPartition(doc, key).get(field)
+}
+
+export function writePartitionField<T extends YDocPartitionKey>(
+  doc: Y.Doc,
+  key: T,
+  field: string,
+  value: unknown,
+): void {
+  doc.transact(() => {
+    getPartition(doc, key).set(field, value)
+  })
+}
+
+function getFieldMetadata(doc: Y.Doc): Y.Map<number> {
+  return doc.getMap<number>(YDOC_CONVERGE_METADATA_KEY)
+}
+
+function fieldMetadataKey(
+  partition: YDocPartitionKey,
+  field: string,
+): string {
+  return `${partition}:${field}`
+}
+
+export function readPartitionFieldCommittedAt<T extends YDocPartitionKey>(
+  doc: Y.Doc,
+  key: T,
+  field: string,
+): number | null {
+  const value = getFieldMetadata(doc).get(fieldMetadataKey(key, field))
+  return typeof value === 'number' ? value : null
+}
+
+export function writePartitionFieldCommittedAt<T extends YDocPartitionKey>(
+  doc: Y.Doc,
+  key: T,
+  field: string,
+  committedAt: number,
+): void {
+  doc.transact(() => {
+    getFieldMetadata(doc).set(fieldMetadataKey(key, field), committedAt)
+  })
 }
 
 export function subscribeDocUpdates(

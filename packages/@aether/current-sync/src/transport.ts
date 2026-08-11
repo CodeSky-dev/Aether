@@ -1,4 +1,4 @@
-// @aether/editor-host · 传输抽象与内存 loopback 实现。
+// @aether/current-sync · 传输抽象与内存 loopback 实现。
 
 export interface ProviderMessage {
   kind: 'document' | 'presence'

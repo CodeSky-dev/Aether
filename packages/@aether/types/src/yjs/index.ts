@@ -51,3 +51,17 @@ export interface YDocPartitionMap {
 }
 
 export type YDocPartition<T extends YDocPartitionKey> = YDocPartitionMap[T]
+
+/** Current 汇合元数据的顶层 Y.Doc key，不属于业务分区。 */
+export const YDOC_CONVERGE_METADATA_KEY =
+  '__aether_current_sync_field_metadata' as const
+
+/** 汇合元数据：分区字段标识 → 该字段最近一次提交时钟。 */
+export interface YDocConvergeMetadata {
+  [fieldKey: string]: number
+}
+
+/** Y.Doc 顶层汇合元数据结构映射。 */
+export interface YDocMetadataMap {
+  [YDOC_CONVERGE_METADATA_KEY]: YDocConvergeMetadata
+}

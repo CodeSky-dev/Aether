@@ -8,7 +8,7 @@ export default defineConfig({
       fileName: 'index',
     },
     rollupOptions: {
-      external: ['@aether/types', 'y-protocols/awareness', 'yjs'],
+      external: ['@aether/current-sync'],
     },
   },
 })

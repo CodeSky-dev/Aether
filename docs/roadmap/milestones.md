@@ -48,8 +48,8 @@ graph LR
 
 **任务清单**：
 
-- [ ] `@aether/current-sync`：Realm Channel Partition 实现
-- [ ] Converge Engine：基础字段级冲突策略
+- [x] `@aether/current-sync`：Realm Channel Partition 实现
+- [x] Converge Engine：基础字段级冲突策略
 - [ ] Server Actions 状态通道：更新落库 + 广播
 - [ ] Hocuspocus 收敛服务接入
 - [ ] Drift Persistence：IndexedDB 持久化

@@ -14,7 +14,7 @@ aether/
 │
 ├── apps/
 │   ├── @aether/web/                  # Next.js 16 主应用（App Router / Server Actions / PPR / Edge）
-│   ├── @aether/editor-host/          # 编辑器宿主：Yjs 渲染层、Drift 持久化入口
+│   ├── @aether/editor-host/          # 编辑器宿主：Current 渲染层、Drift 持久化入口
 │   └── @aether/docs/                 # 站点、公开 API 文档、术语表
 │
 └── packages/
@@ -38,7 +38,7 @@ aether/
 |---|---|---|---|
 | `@aether/db` | Drizzle schema、迁移、查询封装、Realm 隔离查询守卫 | `@aether/types` | tsc |
 | `@aether/auth` | Better-Auth 适配、Realm Tree 三级模型、Entity 身份、权限中间件 | `@aether/db`、`@aether/types` | tsc |
-| `@aether/current-sync` | Yjs Provider、Presence、Converge Engine、Reconnect 握手、序列化适配层 | `@aether/types` | tsc |
+| `@aether/current-sync` | Yjs Provider、Presence、Realm Channel Partition、Converge Engine、Reconnect 握手、序列化适配层 | `@aether/types`、Yjs、y-protocols | tsc |
 | `@aether/entity-core` | Entity 运行时、Capability Manifesto、Handoff Gate 状态机、审计埋点 | `@aether/auth`、`@aether/db`、`@aether/types` | tsc |
 | `@aether/thread-bindings` | Thread 锚点绑定、对话内嵌、重水合路径、绑定内核 | `@aether/db`、`@aether/types` | tsc |
 | `@aether/manifestation` | Vercel Preview 集成、Inline Annotation、Spot Diff、画廊 | `@aether/current-sync`、`@aether/types` | tsc |
