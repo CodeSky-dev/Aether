@@ -36,15 +36,6 @@ export function applyDocUpdate(
   Y.applyUpdate(doc, update, origin)
 }
 
-export function setPartitionValue<T extends YDocPartitionKey>(
-  doc: Y.Doc,
-  key: T,
-  field: string,
-  value: unknown,
-): void {
-  getPartition(doc, key).set(field, value)
-}
-
 export function appendPartitionText<T extends YDocPartitionKey>(
   doc: Y.Doc,
   key: T,
