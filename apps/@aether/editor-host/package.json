@@ -18,7 +18,8 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "probe": "tsx probes/serverless.ts"
   },
   "dependencies": {
     "@aether/types": "workspace:*",
@@ -28,6 +29,7 @@
   "devDependencies": {
     "@aether/config": "workspace:*",
     "eslint": "^9.39.5",
+    "tsx": "^4.23.11",
     "typescript": "^6.0.0",
     "vite": "^8.2.1",
     "vitest": "^3.2.4"

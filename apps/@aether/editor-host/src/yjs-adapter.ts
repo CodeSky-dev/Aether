@@ -17,12 +17,62 @@ export function encodeDocUpdate(doc: Y.Doc): Uint8Array {
   return Y.encodeStateAsUpdate(doc)
 }
 
+export function encodeDocStateVector(doc: Y.Doc): Uint8Array {
+  return Y.encodeStateVector(doc)
+}
+
+export function diffDocUpdate(
+  update: Uint8Array,
+  stateVector: Uint8Array,
+): Uint8Array {
+  return Y.diffUpdate(update, stateVector)
+}
+
 export function applyDocUpdate(
   doc: Y.Doc,
   update: Uint8Array,
   origin: symbol,
 ): void {
   Y.applyUpdate(doc, update, origin)
+}
+
+export function setPartitionValue<T extends YDocPartitionKey>(
+  doc: Y.Doc,
+  key: T,
+  field: string,
+  value: unknown,
+): void {
+  getPartition(doc, key).set(field, value)
+}
+
+export function appendPartitionText<T extends YDocPartitionKey>(
+  doc: Y.Doc,
+  key: T,
+  field: string,
+  value: string,
+): void {
+  doc.transact(() => {
+    const partition = getPartition(doc, key)
+    const existing = partition.get(field)
+    const text =
+      existing instanceof Y.Text ? existing : new Y.Text()
+    if (!(existing instanceof Y.Text)) {
+      partition.set(field, text)
+    }
+    text.insert(text.length, value)
+  })
+}
+
+export function readPartitionText<T extends YDocPartitionKey>(
+  doc: Y.Doc,
+  key: T,
+  field: string,
+): string {
+  const value = getPartition(doc, key).get(field)
+  if (value instanceof Y.Text) {
+    return value.toJSON()
+  }
+  return typeof value === 'string' ? value : ''
 }
 
 export function subscribeDocUpdates(
