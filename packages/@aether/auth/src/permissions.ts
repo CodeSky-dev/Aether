@@ -14,30 +14,38 @@ export const realmStatements = {
 
 export const realmAccessControl = createAccessControl(realmStatements)
 
+// 基础权限定义 - 避免重复声明
+const basePermissions = {
+  thread: ['create', 'read', 'update'] as const,
+  entity: ['read'] as const,
+  current: ['read', 'converge', 'drift'] as const,
+} as const
+
+// 使用展开运算符减少重复，通过组合方式定义角色
 export const realmOwnerRole = realmAccessControl.newRole({
   realm: ['read', 'update', 'delete', 'manage_member'],
   project: ['create', 'read', 'update', 'delete'],
-  thread: ['create', 'read', 'update', 'resolve', 'archive'],
-  entity: ['read', 'create', 'update'],
-  current: ['read', 'converge', 'drift'],
+  thread: [...basePermissions.thread, 'resolve', 'archive'],
+  entity: [...basePermissions.entity, 'create', 'update'],
+  current: basePermissions.current,
   audit: ['read'],
 })
 
 export const realmAdminRole = realmAccessControl.newRole({
   realm: ['read', 'update', 'manage_member'],
   project: ['create', 'read', 'update', 'delete'],
-  thread: ['create', 'read', 'update', 'resolve', 'archive'],
-  entity: ['read', 'create', 'update'],
-  current: ['read', 'converge', 'drift'],
+  thread: [...basePermissions.thread, 'resolve', 'archive'],
+  entity: [...basePermissions.entity, 'create', 'update'],
+  current: basePermissions.current,
   audit: ['read'],
 })
 
 export const realmMemberRole = realmAccessControl.newRole({
   realm: ['read'],
   project: ['read'],
-  thread: ['create', 'read', 'update'],
-  entity: ['read'],
-  current: ['read', 'converge', 'drift'],
+  thread: basePermissions.thread,
+  entity: basePermissions.entity,
+  current: basePermissions.current,
   audit: [],
 })
 

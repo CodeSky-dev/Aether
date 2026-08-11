@@ -28,6 +28,12 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    // Tailwind v4 缓存污染防护：确保 CSS 生成依赖正确的 content 文件哈希
+    "generate:css": {
+      "dependsOn": ["^build"],
+      "outputs": ["**/*.css"],
+      "env": ["TAILWIND_CONTENT_HASH"]
     }
   }
 }

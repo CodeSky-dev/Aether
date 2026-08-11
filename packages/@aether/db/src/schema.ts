@@ -117,6 +117,10 @@ export const members = pgTable(
   },
   (t) => [
     uniqueIndex('members_actor_idx').on(t.realm_id, t.actor_type, t.actor_id),
+    // 高频查询优化：按项目 + 角色筛选成员
+    uniqueIndex('members_project_role_idx').on(t.project_id, t.role),
+    // 按状态筛选成员
+    uniqueIndex('members_status_idx').on(t.status),
   ],
 )
 
@@ -174,7 +178,13 @@ export const threads = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [uniqueIndex('threads_realm_created_idx').on(t.realm_id, t.created_at)],
+  (t) => [
+    uniqueIndex('threads_realm_created_idx').on(t.realm_id, t.created_at),
+    // 高频查询优化：按项目 + 状态筛选线程
+    uniqueIndex('threads_project_status_idx').on(t.project_id, t.status),
+    // 父子线程关系查询优化
+    uniqueIndex('threads_parent_idx').on(t.parent_thread_id),
+  ],
 )
 
 // ---- currents（当前态：Yjs 连接实例与 Presence 状态流）----
@@ -225,5 +235,9 @@ export const auditLog = pgTable(
   (t) => [
     uniqueIndex('audit_log_idempotency_idx').on(t.idempotency_key),
     uniqueIndex('audit_log_realm_created_idx').on(t.realm_id, t.created_at),
+    // 高频查询优化：按 Actor + 动作筛选审计日志
+    uniqueIndex('audit_log_actor_action_idx').on(t.actor_type, t.actor_id, t.action),
+    // 按时间范围查询优化
+    uniqueIndex('audit_log_action_created_idx').on(t.action, t.created_at),
   ],
 )
