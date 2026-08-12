@@ -28,6 +28,7 @@ export {
   readPartitionField,
   readPartitionText,
   subscribeDocUpdates,
+  subscribePartitionUpdates,
   writePartitionField,
 } from './yjs-adapter.js'
 export {

@@ -27,7 +27,10 @@ export class PresenceChannel {
   private readonly now: () => number
   private readonly listeners = new Set<PresenceChangeListener>()
   private readonly sweepTimer: ReturnType<typeof setInterval>
-  private readonly knownSequences = new Map<string, number>()
+  private readonly knownSequences = new Map<
+    string,
+    { sequence: number; lastSeenAt: number }
+  >()
   private localSequence = 0
   private localPresence: Pick<
     PresenceSnapshot,
@@ -61,7 +64,10 @@ export class PresenceChannel {
   ): void {
     this.localPresence = presence
     this.localSequence += 1
-    this.knownSequences.set(this.sessionId, this.localSequence)
+    this.knownSequences.set(this.sessionId, {
+      sequence: this.localSequence,
+      lastSeenAt: this.now(),
+    })
     this.awareness.setLocalState({
       actorId: this.actorId,
       sessionId: this.sessionId,
@@ -105,10 +111,10 @@ export class PresenceChannel {
         return rawState
       }
       const sessionId = this.getSessionId(value)
-      const knownSequence = this.knownSequences.get(sessionId)
+      const knownRecord = this.knownSequences.get(sessionId)
       if (
-        knownSequence === undefined ||
-        value.sequence > knownSequence
+        knownRecord === undefined ||
+        value.sequence > knownRecord.sequence
       ) {
         return rawState
       }
@@ -124,13 +130,15 @@ export class PresenceChannel {
         typeof state.sequence === 'number'
       ) {
         const sessionId = this.getSessionId(state)
-        this.knownSequences.set(
-          sessionId,
-          Math.max(
-            this.knownSequences.get(sessionId) ?? 0,
-            state.sequence,
+        const existing = this.knownSequences.get(sessionId)
+        this.knownSequences.set(sessionId, {
+          sequence: Math.max(existing?.sequence ?? 0, state.sequence),
+          lastSeenAt: Math.max(
+            existing?.lastSeenAt ?? 0,
+            typeof state.lastSeenAt === 'number' ? state.lastSeenAt : 0,
+            this.now(),
           ),
-        )
+        })
       }
     }
     this.sweepExpired()
@@ -228,14 +236,18 @@ export class PresenceChannel {
   }
 
   private pruneKnownSequences(): void {
+    const now = this.now()
     const activeSessions = new Set<string>()
     for (const state of this.awareness.getStates().values()) {
       if (state && typeof state === 'object') {
         activeSessions.add(this.getSessionId(state))
       }
     }
-    for (const sessionId of this.knownSequences.keys()) {
-      if (!activeSessions.has(sessionId)) {
+    for (const [sessionId, record] of this.knownSequences) {
+      if (activeSessions.has(sessionId)) {
+        continue
+      }
+      if (now - record.lastSeenAt > this.timeoutMs) {
         this.knownSequences.delete(sessionId)
       }
     }

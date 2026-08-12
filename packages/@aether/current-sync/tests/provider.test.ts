@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import * as Y from 'yjs'
+import { Awareness, encodeAwarenessUpdate } from 'y-protocols/awareness'
 import {
   appendPartitionText,
   applyDocUpdate,
@@ -505,6 +507,86 @@ describe('@aether/current-sync', () => {
     firstSession.destroy()
     newSession.destroy()
     receiver.destroy()
+  })
+
+  it('离开者清除 Presence 后，迟到的旧 Presence 不会重新出现', () => {
+    const source = new YjsProvider({
+      actorId: 'source',
+      transport: createLoopbackTransportPair()[0],
+    })
+    const receiver = new YjsProvider({
+      actorId: 'receiver',
+      transport: createLoopbackTransportPair()[0],
+    })
+    source.setLocalPresence({
+      cursor: { file: 'a.ts', offset: 1 },
+      selection: null,
+    })
+    const staleUpdate = source.presence.encodeUpdate()
+    receiver.presence.applyUpdate(staleUpdate, Symbol('test'))
+    expect(receiver.presence.getSnapshots()).toHaveLength(1)
+
+    source.presence.clearLocalPresence()
+    receiver.presence.applyUpdate(
+      source.presence.encodeUpdate([source.presence.getLocalClientId()]),
+      Symbol('test'),
+    )
+    expect(receiver.presence.getSnapshots()).toEqual([])
+
+    receiver.presence.applyUpdate(staleUpdate, Symbol('test'))
+    expect(receiver.presence.getSnapshots()).toEqual([])
+
+    source.destroy()
+    receiver.destroy()
+  })
+
+  it('离开者经由新 clientID 重放的旧 Presence（同会话）不会复活幽灵光标', () => {
+    const receiver = new YjsProvider({
+      actorId: 'receiver',
+      transport: createLoopbackTransportPair()[0],
+    })
+    const sourceDoc = new Y.Doc()
+    const sourceAwareness = new Awareness(sourceDoc)
+    sourceAwareness.clientID = 9001
+    sourceAwareness.setLocalState({})
+    sourceAwareness.setLocalState({
+      actorId: 'ghost',
+      cursor: { file: 'a.ts', offset: 1 },
+      selection: null,
+      lastSeenAt: Date.now(),
+      sequence: 5,
+    })
+    const firstUpdate = encodeAwarenessUpdate(sourceAwareness, [9001])
+    receiver.presence.applyUpdate(firstUpdate, Symbol('test'))
+    expect(receiver.presence.getSnapshots()).toHaveLength(1)
+
+    sourceAwareness.setLocalState(null)
+    receiver.presence.applyUpdate(
+      encodeAwarenessUpdate(sourceAwareness, [9001]),
+      Symbol('test'),
+    )
+    expect(receiver.presence.getSnapshots()).toEqual([])
+
+    const resenderDoc = new Y.Doc()
+    const resenderAwareness = new Awareness(resenderDoc)
+    resenderAwareness.clientID = 9002
+    resenderAwareness.setLocalState({})
+    resenderAwareness.setLocalState({
+      actorId: 'ghost',
+      cursor: { file: 'a.ts', offset: 2 },
+      selection: null,
+      lastSeenAt: Date.now(),
+      sequence: 1,
+    })
+    receiver.presence.applyUpdate(
+      encodeAwarenessUpdate(resenderAwareness, [9002]),
+      Symbol('test'),
+    )
+    expect(receiver.presence.getSnapshots()).toEqual([])
+
+    receiver.destroy()
+    sourceDoc.destroy()
+    resenderDoc.destroy()
   })
 
   it('同一 actor 的并发 client 各自保留独立 Presence', () => {
