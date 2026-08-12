@@ -87,4 +87,61 @@ describe('@aether/state', () => {
     first.destroy()
     second.destroy()
   })
+
+  it('无关分区、元数据或未变更字段的更新不会触发字段投影刷新', async () => {
+    const [first, second] = createProviderPair()
+    const store = createCurrentStateStore()
+    let fieldRefreshCount = 0
+    store.subscribe((state, previousState) => {
+      if (state.fieldValue !== previousState.fieldValue) {
+        fieldRefreshCount += 1
+      }
+    })
+    store.getState().bind(second, { partition: 'code', fieldPath: 'content' })
+    await Promise.all([first.connect(), second.connect()])
+
+    writePartitionField(first.doc, 'code', 'content', { status: 'ready' })
+    expect(store.getState().fieldValue).toEqual({ status: 'ready' })
+    const baseline = fieldRefreshCount
+
+    writePartitionField(first.doc, 'realm', 'version', 2)
+    expect(fieldRefreshCount).toBe(baseline)
+
+    first.doc
+      .getMap('__aether_current_sync_field_metadata')
+      .set('code:content', 1)
+    expect(fieldRefreshCount).toBe(baseline)
+
+    writePartitionField(first.doc, 'code', 'content', { status: 'ready' })
+    expect(fieldRefreshCount).toBe(baseline)
+
+    writePartitionField(first.doc, 'code', 'content', { status: 'done' })
+    expect(fieldRefreshCount).toBe(baseline + 1)
+
+    store.getState().unbind()
+    first.destroy()
+    second.destroy()
+  })
+
+  it('投影文档对象时不会被 __proto__ 键污染原型', () => {
+    const [first] = createProviderPair()
+    const store = createCurrentStateStore()
+    store.getState().bind(first, { partition: 'code', fieldPath: 'content' })
+
+    const malicious = { name: 'safe' }
+    Object.defineProperty(malicious, '__proto__', {
+      value: { polluted: true },
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    })
+    writePartitionField(first.doc, 'code', 'content', malicious)
+
+    const value = store.getState().fieldValue as Record<string, unknown>
+    expect(Object.getPrototypeOf(value)).toBe(Object.prototype)
+    expect(value.polluted).toBeUndefined()
+
+    store.getState().unbind()
+    first.destroy()
+  })
 })

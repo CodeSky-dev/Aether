@@ -8,7 +8,7 @@ import type {
 } from '@aether/types'
 import {
   readPartitionField,
-  subscribeDocUpdates,
+  subscribePartitionUpdates,
   writePartitionField,
   type ProviderConnectionState,
   type YjsProvider,
@@ -49,7 +49,7 @@ export function createCurrentStateStore(): CurrentStateStore {
   let activeProvider: YjsProvider | null = null
   let activeBinding: CurrentStateBinding | null = null
 
-  const store = createStore<CurrentState>((set) => {
+  const store = createStore<CurrentState>((set, get) => {
     const resetProjection = (): void => {
       set({
         connectionState: 'disconnected',
@@ -78,15 +78,17 @@ export function createCurrentStateStore(): CurrentStateStore {
         if (!active) {
           return
         }
-        set({
-          fieldValue: toStateValue(
-            readPartitionField(
-              provider.doc,
-              binding.partition,
-              binding.fieldPath,
-            ),
+        const nextValue = toStateValue(
+          readPartitionField(
+            provider.doc,
+            binding.partition,
+            binding.fieldPath,
           ),
-        })
+        )
+        if (deepEqual(get().fieldValue, nextValue)) {
+          return
+        }
+        set({ fieldValue: nextValue })
       }
       const stopConnection = provider.subscribeConnectionState(
         (connectionState) => set({ connectionState }),
@@ -94,7 +96,11 @@ export function createCurrentStateStore(): CurrentStateStore {
       const stopPresence = provider.subscribePresence((presence) =>
         set({ presence: presence.map((snapshot) => ({ ...snapshot })) }),
       )
-      const stopDocument = subscribeDocUpdates(provider.doc, refreshField)
+      const stopDocument = subscribePartitionUpdates(
+        provider.doc,
+        binding.partition,
+        () => refreshField(),
+      )
       refreshField()
       const cleanup = (): void => {
         if (!active) {
@@ -182,8 +188,44 @@ function toStateValue(value: unknown): StateValue | undefined {
   for (const [key, item] of Object.entries(objectValue)) {
     const projected = toStateValue(item)
     if (projected !== undefined) {
-      result[key] = projected
+      Object.defineProperty(result, key, {
+        value: projected,
+        enumerable: true,
+        writable: true,
+        configurable: true,
+      })
     }
   }
   return result
+}
+
+function deepEqual(
+  a: StateValue | undefined,
+  b: StateValue | undefined,
+): boolean {
+  if (a === b) {
+    return true
+  }
+  if (a === null || b === null) {
+    return false
+  }
+  if (Array.isArray(a)) {
+    return (
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((item, index) => deepEqual(item, b[index]))
+    )
+  }
+  if (Array.isArray(b)) {
+    return false
+  }
+  if (typeof a === 'object' && typeof b === 'object') {
+    const aKeys = Object.keys(a)
+    const bKeys = Object.keys(b)
+    if (aKeys.length !== bKeys.length) {
+      return false
+    }
+    return aKeys.every((key) => deepEqual(a[key], b[key]))
+  }
+  return false
 }
