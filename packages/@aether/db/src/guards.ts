@@ -13,6 +13,7 @@ const REALM_TABLES = [
   'entities',
   'threads',
   'currents',
+  'crdt_updates',
   'audit_log',
 ] as const
 

@@ -2,15 +2,32 @@
 // 表结构与字段对齐 docs/roadmap/data-model.md，命名遵循 Aether 术语体系。
 // schema 是 @aether/types 领域类型的运行期实现映射；类型保持同构。
 import {
+  customType,
   jsonb,
   pgEnum,
   pgTable,
   text,
   timestamp,
   index,
+  uniqueIndex,
   uuid,
+  bigserial,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core'
+
+// bytea：drizzle 0.45 的 pg-core 未内置二进制列，用 customType 声明。
+// data 侧为 Uint8Array（与 yjs 增量字节序一致），driver 侧交给连接驱动编码。
+const bytea = customType<{
+  data: Uint8Array
+  driverData: Buffer
+}>({
+  dataType() {
+    return 'bytea'
+  },
+  toDriver(value: Uint8Array) {
+    return Buffer.from(value)
+  },
+})
 
 export const actorTypeEnum = pgEnum('actor_type', ['human', 'entity'])
 
@@ -210,6 +227,33 @@ export const currents = pgTable(
       .defaultNow(),
   },
   (t) => [index('currents_doc_ref_idx').on(t.doc_ref)],
+)
+
+// ---- crdt_updates（CRDT 更新日志：Current 增量落库，仅追加）----
+
+export const crdtUpdates = pgTable(
+  'crdt_updates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    realm_id: uuid('realm_id')
+      .notNull()
+      .references(() => realms.id),
+    doc_ref: text('doc_ref').notNull(),
+    // 每个 doc_ref 单调递增的重放游标；重复追加幂等
+    seq: bigserial('seq', { mode: 'number' }).notNull(),
+    payload: bytea('payload').notNull(),
+    actor_type: actorTypeEnum('actor_type').notNull(),
+    actor_id: uuid('actor_id').notNull(),
+    idempotency_key: text('idempotency_key').notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('crdt_updates_doc_seq_uniq').on(t.doc_ref, t.seq),
+    uniqueIndex('crdt_updates_doc_idem_uniq').on(t.doc_ref, t.idempotency_key),
+    index('crdt_updates_realm_doc_seq_idx').on(t.realm_id, t.doc_ref, t.seq),
+  ],
 )
 
 // ---- audit_log（审计轨迹：人类与 Entity 行为统一入账）----

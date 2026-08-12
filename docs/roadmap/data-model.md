@@ -109,6 +109,28 @@ Yjs Provider 连接实例与 Presence 状态流。
 | `last_converge_at` | timestamptz | 最近一次 Converge 时间 |
 | `created_at` / `updated_at` | timestamptz | 时间戳 |
 
+### `crdt_updates`（CRDT 更新日志）
+
+Current 增量落库的追加式日志：Server Actions 状态通道与 Hocuspocus 持久化共同依赖它做“落库 + 增量重放”。
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `id` | uuid | 主键 |
+| `realm_id` | uuid | 外键 → `realms` |
+| `doc_ref` | text | Y.Doc 引用标识 |
+| `seq` | bigserial | 每个 doc 单调递增的重放游标 |
+| `payload` | bytea | Yjs 增量（encodeStateAsUpdate 载荷） |
+| `actor_type` | enum(`human`, `entity`) | 提交主体类型 |
+| `actor_id` | uuid | 提交主体标识 |
+| `idempotency_key` | text | 幂等键，唯一约束 (doc_ref, idempotency_key) |
+| `created_at` | timestamptz | 时间戳 |
+
+约束与索引：
+
+- 唯一 `(doc_ref, seq)`：游标序唯一。
+- 唯一 `(doc_ref, idempotency_key)`：同一增量重复提交静默去重（对应 [risks.md](./risks.md) 风险 6）。
+- `(realm_id, doc_ref, seq)`：Realm 隔离下的增量重放路径。
+
 ### `audit_log`（审计轨迹）
 
 人类与 Entity 行为统一入账，不可变、可导出。
