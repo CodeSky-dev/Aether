@@ -52,7 +52,7 @@ graph LR
 - [x] Converge Engine：基础字段级冲突策略
 - [ ] Server Actions 状态通道：更新落库 + 广播
 - [ ] Hocuspocus 收敛服务接入
-- [ ] Drift Persistence：IndexedDB 持久化
+- [x] Drift Persistence：IndexedDB 持久化
 - [x] Reconnect Handshake：增量对账
 - [x] Cursor Wavefront：多光标渲染
 - [x] `@aether/state`：Zustand store 与 Yjs 双向绑定
