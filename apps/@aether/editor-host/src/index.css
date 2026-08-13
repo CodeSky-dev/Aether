@@ -1,0 +1,31 @@
+/* @aether/editor-host · 宿主基础样式 */
+@import '@aether/ui/tokens.css';
+@import 'tailwindcss';
+
+:root {
+  --surface-paper: #fcfaf7;
+  --color-accent: #af596a;
+  --color-neutral-1: #f7f5f2;
+  --color-neutral-2: #efece8;
+  --color-neutral-7: #7a7774;
+  --color-neutral-9: #3e3b37;
+  --app-font-sans:
+    system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+html {
+  font-size: 14px;
+  letter-spacing: 0.01em;
+}
+
+body {
+  margin: 0;
+  background: var(--surface-paper);
+  color: var(--color-neutral-9);
+  font-family: var(--app-font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  height: 100vh;
+}
