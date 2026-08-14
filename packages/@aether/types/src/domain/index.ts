@@ -57,6 +57,8 @@ export interface CapabilityManifesto {
   capabilities: string[]
   permission_scopes: string[]
   available_tools: string[]
+  /** schema 版本号，落库 jsonb 时按需保留（默认 1 时省略） */
+  schema_version?: number
 }
 
 export interface Entity {
@@ -135,6 +137,23 @@ export interface AuditLogEntry {
   payload_hash: string
   idempotency_key: string
   result: Record<string, unknown>
+  created_at: ISO8601
+}
+
+// ---- Dialogue（Thread 内嵌对话历史）----
+
+export type DialogueRole = 'user' | 'assistant' | 'system'
+
+export interface DialogueMessage {
+  id: UUID
+  realm_id: UUID
+  dialogue_id: UUID
+  seq: number
+  actor_type: ActorType
+  actor_id: UUID
+  role: DialogueRole
+  content: string
+  metadata: Record<string, unknown>
   created_at: ISO8601
 }
 

@@ -1,0 +1,28 @@
+/* @aether/web · 全局样式入口
+ * Yohaku 约束：tokens 单一来源，hex 只存在于 tokens.css；宿主在此声明运行时变量。
+ * 加载顺序遵循 docs/design/yohaku.md：先 tailwindcss，再 @aether/ui/tokens.css。
+ */
+@import 'tailwindcss';
+@import '@aether/ui/tokens.css';
+
+/* 宿主运行时变量（tokens.css 只声明静态契约，paper/accent/border 由宿主覆盖） */
+:root {
+  --surface-paper: #fcfaf7;
+  --color-border: #e3e1db;
+  --app-font-sans:
+    system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Segoe UI',
+    Roboto, sans-serif;
+}
+
+html {
+  font-size: 14px;
+  letter-spacing: 0.01em;
+}
+
+body {
+  margin: 0;
+  background: var(--surface-paper);
+  color: var(--color-neutral-9);
+  font-family: var(--app-font-sans);
+  -webkit-font-smoothing: antialiased;
+}

@@ -50,8 +50,8 @@ graph LR
 
 - [x] `@aether/current-sync`：Realm Channel Partition 实现
 - [x] Converge Engine：基础字段级冲突策略
-- [ ] Server Actions 状态通道：更新落库 + 广播
-- [ ] Hocuspocus 收敛服务接入
+- [x] Server Actions 状态通道：更新落库 + 广播
+- [x] Hocuspocus 收敛服务接入
 - [x] Drift Persistence：IndexedDB 持久化
 - [x] Reconnect Handshake：增量对账
 - [x] Cursor Wavefront：多光标渲染
@@ -74,17 +74,17 @@ graph LR
 
 **任务清单**：
 
-- [ ] `@aether/entity-core`：Entity Identity（Better-Auth 身份）
-- [ ] Capability Manifesto 声明与校验
-- [ ] Entity Audit Trail 埋点
-- [ ] Handoff Gate 状态机（`waiting` 状态 + 人类确认流）
-- [ ] Vercel AI SDK 接入 Entity 运行时
-- [ ] Entity Presence Cursor
-- [ ] `@aether/thread-bindings`：Code Anchor Binding
-- [ ] Dialogue Forging：Thread 内嵌对话历史
-- [ ] Rehydration Path：上下文重建
-- [ ] `@aether/manifestation`：Inline Annotation（CRDT 持久化）
-- [ ] Manifestation Binding
+- [x] `@aether/entity-core`：Entity Identity（Better-Auth 身份）
+- [x] Capability Manifesto 声明与校验
+- [x] Entity Audit Trail 埋点
+- [x] Handoff Gate 状态机（`waiting` 状态 + 人类确认流）
+- [x] Vercel AI SDK 接入 Entity 运行时
+- [x] Entity Presence Cursor
+- [x] `@aether/thread-bindings`：Code Anchor Binding
+- [x] Dialogue Forging：Thread 内嵌对话历史
+- [x] Rehydration Path：上下文重建
+- [x] `@aether/manifestation`：Inline Annotation（CRDT 持久化）
+- [x] Manifestation Binding
 
 **退出标准**：
 - Entity 以独立身份参与 Current，操作全量可审计。

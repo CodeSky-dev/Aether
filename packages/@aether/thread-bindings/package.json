@@ -1,0 +1,51 @@
+{
+  "name": "@aether/thread-bindings",
+  "version": "0.0.1",
+  "description": "Aether Thread-Binding 内核：Code Anchor Binding、Dialogue Forging、Rehydration Path 全链路。Thread 是绑定了文件范围、代码片段、Manifestation URL 与对话历史的叙事单元。",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./anchor": {
+      "types": "./dist/anchor.d.ts",
+      "import": "./dist/anchor.js"
+    },
+    "./dialogue": {
+      "types": "./dist/dialogue.d.ts",
+      "import": "./dist/dialogue.js"
+    },
+    "./rehydrate": {
+      "types": "./dist/rehydrate.d.ts",
+      "import": "./dist/rehydrate.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@aether/db": "workspace:*",
+    "@aether/types": "workspace:*",
+    "@paralleldrive/cuid2": "^3.3.0",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@aether/config": "workspace:*",
+    "@types/node": "^26.2.0",
+    "eslint": "^9.39.5",
+    "typescript": "^6.0.0",
+    "vitest": "^3.2.4"
+  }
+}

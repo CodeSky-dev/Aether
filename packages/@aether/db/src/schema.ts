@@ -65,6 +65,12 @@ export const auditActionEnum = pgEnum('audit_action', [
   'execute',
 ])
 
+export const dialogueRoleEnum = pgEnum('dialogue_role', [
+  'user',
+  'assistant',
+  'system',
+])
+
 // ---- realms（领域：隔离边界与权限树根）----
 
 export const realms = pgTable(
@@ -283,5 +289,43 @@ export const auditLog = pgTable(
     index('audit_log_actor_action_idx').on(t.actor_type, t.actor_id, t.action),
     // 按时间范围查询优化
     index('audit_log_action_created_idx').on(t.action, t.created_at),
+  ],
+)
+
+// ---- dialogue_messages（对话消息：Thread 内嵌的 Entity 对话历史）----
+// threads.dialogue_ref 指向 dialogue_id，将一组对话消息绑定到 Thread。
+// 每条消息记录 actor（人/Entity）、role（user/assistant/system）与内容，
+// 形成可引用的决策记录（Dialogue Forging）。
+
+export const dialogueMessages = pgTable(
+  'dialogue_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    realm_id: uuid('realm_id')
+      .notNull()
+      .references(() => realms.id),
+    // 对话分组标识；threads.dialogue_ref 指向此字段
+    dialogue_id: uuid('dialogue_id').notNull(),
+    // 对话内单调递增序号，保证消息顺序
+    seq: bigserial('seq', { mode: 'number' }).notNull(),
+    actor_type: actorTypeEnum('actor_type').notNull(),
+    actor_id: uuid('actor_id').notNull(),
+    role: dialogueRoleEnum('role').notNull(),
+    content: text('content').notNull(),
+    // 扩展元数据：工具调用、引用、附件引用等
+    metadata: jsonb('metadata').notNull().default({}),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('dialogue_messages_dialogue_seq_uniq').on(
+      t.dialogue_id,
+      t.seq,
+    ),
+    index('dialogue_messages_realm_dialogue_idx').on(
+      t.realm_id,
+      t.dialogue_id,
+    ),
   ],
 )

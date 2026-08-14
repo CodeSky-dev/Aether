@@ -8,16 +8,15 @@ export const tailwind = {
     'no-restricted-syntax': [
       'error',
       {
+        // 仅拦截 className 字符串字面量中出现的 Tailwind 默认 neutral-50..950；
+        // Yohaku 允许的 neutral-1..10 不受影响。
         selector:
-          'JSXAttribute[name.name="className"], Property[key.name="className"]',
+          'JSXAttribute[name.name="className"][value=/\\b(?:text|bg|border|ring|fill|stroke|from|to|via)-neutral-(?:50|100|200|300|400|500|600|700|800|900|950)\\b/]',
         message: '禁用 Tailwind 默认 neutral-50..950（用 --color-neutral-1..10）',
       },
-    ],
-    'no-restricted-properties': [
-      'error',
       {
-        object: 'clsx',
-        property: 'neutral-',
+        selector:
+          'Property[key.name="className"][value.value=/\\b(?:text|bg|border|ring|fill|stroke|from|to|via)-neutral-(?:50|100|200|300|400|500|600|700|800|900|950)\\b/]',
         message: '禁用 Tailwind 默认 neutral-50..950（用 --color-neutral-1..10）',
       },
     ],

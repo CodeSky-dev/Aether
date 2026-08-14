@@ -1,0 +1,32 @@
+{
+  "name": "@aether/converge-server",
+  "version": "0.0.1",
+  "description": "Aether 收敛服务：Hocuspocus WebSocket 收敛 + Postgres 持久化 + Redis 广播 seam。承载 The Current 的权威实时通道。",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@aether/db": "workspace:*",
+    "@aether/types": "workspace:*",
+    "@hocuspocus/server": "^2.15.0",
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.5",
+    "yjs": "13.6.27"
+  },
+  "devDependencies": {
+    "@aether/config": "workspace:*",
+    "@types/node": "^26.2.0",
+    "eslint": "^9.39.5",
+    "tsx": "^4.20.5",
+    "typescript": "^6.0.0",
+    "vitest": "^3.2.4"
+  }
+}

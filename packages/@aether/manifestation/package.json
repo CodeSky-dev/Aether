@@ -1,0 +1,49 @@
+{
+  "name": "@aether/manifestation",
+  "version": "0.0.1",
+  "description": "Aether Manifestation：Manifestation Binding + Inline Annotation CRDT 持久化。标注作为 CRDT 数据持久化，多人可见、可编辑。",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./manifestation": {
+      "types": "./dist/manifestation.d.ts",
+      "import": "./dist/manifestation.js"
+    },
+    "./annotation": {
+      "types": "./dist/annotation.d.ts",
+      "import": "./dist/annotation.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@aether/current-sync": "workspace:*",
+    "@aether/db": "workspace:*",
+    "@aether/thread-bindings": "workspace:*",
+    "@aether/types": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "yjs": "13.6.27"
+  },
+  "devDependencies": {
+    "@aether/config": "workspace:*",
+    "@types/node": "^26.2.0",
+    "eslint": "^9.39.5",
+    "typescript": "^6.0.0",
+    "vitest": "^3.2.4"
+  }
+}

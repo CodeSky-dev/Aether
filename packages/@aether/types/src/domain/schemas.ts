@@ -83,6 +83,7 @@ export const CapabilityManifestoSchema = z.object({
   capabilities: z.array(z.string()),
   permission_scopes: z.array(z.string()),
   available_tools: z.array(z.string()),
+  schema_version: z.number().optional(),
 })
 export type CapabilityManifesto = z.infer<typeof CapabilityManifestoSchema>
 
@@ -182,3 +183,22 @@ export const AuditLogEntrySchema = z.object({
   created_at: ISO8601Schema,
 })
 export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>
+
+// ---- Dialogue（Thread 内嵌对话历史）----
+
+export const DialogueRoleSchema = z.enum(['user', 'assistant', 'system'])
+export type DialogueRole = z.infer<typeof DialogueRoleSchema>
+
+export const DialogueMessageSchema = z.object({
+  id: UUIDSchema,
+  realm_id: UUIDSchema,
+  dialogue_id: UUIDSchema,
+  seq: z.number(),
+  actor_type: ActorTypeSchema,
+  actor_id: UUIDSchema,
+  role: DialogueRoleSchema,
+  content: z.string(),
+  metadata: z.record(z.unknown()),
+  created_at: ISO8601Schema,
+})
+export type DialogueMessage = z.infer<typeof DialogueMessageSchema>
