@@ -111,7 +111,7 @@ describe('listAnnotationsByThread', () => {
   })
 
   it('默认过滤 resolved annotations', () => {
-    const ann = createAnnotation(doc, {
+    createAnnotation(doc, {
       threadId: 't1',
       file: 'a.ts',
       startLine: 1,

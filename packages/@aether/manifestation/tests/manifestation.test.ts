@@ -5,47 +5,16 @@ import {
   getManifestation,
   unbindManifestation,
   listManifestationsByThread,
+  type ManifestationDb,
 } from '../src/manifestation.js'
-
-function createMockDb(initialRows: Array<{
-  id: string
-  realm_id: string
-  manifestation_url: string | null
-}>) {
-  let rows = [...initialRows]
-  return {
-    select: vi.fn(() => ({
-      from: vi.fn(() => ({
-        where: vi.fn(() => ({
-          url: null as string | null,
-        })),
-      })),
-    })),
-    update: vi.fn(() => ({
-      set: vi.fn((updates: Record<string, unknown>) => ({
-        where: vi.fn(() => ({
-          returning: vi.fn(() => {
-            // Find and update matching row
-            return rows.filter((r) => {
-              return true
-            }).map((r) => ({
-              ...r,
-              ...updates,
-            }))
-          }),
-        })),
-      })),
-    })),
-  }
-}
 
 describe('bindManifestation', () => {
   it('为 Thread 设置 manifestation_url', async () => {
-    let store: Record<string, { url: string | null }> = {
+    const store: Record<string, { url: string | null }> = {
       't1': { url: null },
     }
 
-    const mockDb: any = {
+    const mockDb = {
       update: vi.fn(() => ({
         set: vi.fn((updates: Record<string, unknown>) => ({
           where: vi.fn(() => ({
@@ -56,7 +25,7 @@ describe('bindManifestation', () => {
           })),
         })),
       })),
-    }
+    } as unknown as ManifestationDb
 
     const result = await bindManifestation(mockDb, {
       realmId: 'r1',
@@ -73,26 +42,26 @@ describe('bindManifestation', () => {
 
 describe('getManifestation', () => {
   it('返回 Thread 绑定的 URL', async () => {
-    const mockDb: any = {
+    const mockDb = {
       select: vi.fn(() => ({
         from: vi.fn(() => ({
           where: vi.fn(() => ([{ url: 'https://example.com/doc' }])),
         })),
       })),
-    }
+    } as unknown as ManifestationDb
 
     const url = await getManifestation(mockDb, 'r1', 't1')
     expect(url).toBe('https://example.com/doc')
   })
 
   it('未绑定时返回 null', async () => {
-    const mockDb: any = {
+    const mockDb = {
       select: vi.fn(() => ({
         from: vi.fn(() => ({
           where: vi.fn(() => ([])),
         })),
       })),
-    }
+    } as unknown as ManifestationDb
 
     const url = await getManifestation(mockDb, 'r1', 't1')
     expect(url).toBeNull()
@@ -101,7 +70,7 @@ describe('getManifestation', () => {
 
 describe('unbindManifestation', () => {
   it('清除 manifestation_url', async () => {
-    const mockDb: any = {
+    const mockDb = {
       update: vi.fn(() => ({
         set: vi.fn(() => ({
           where: vi.fn(() => ({
@@ -109,7 +78,7 @@ describe('unbindManifestation', () => {
           })),
         })),
       })),
-    }
+    } as unknown as ManifestationDb
 
     const result = await unbindManifestation(mockDb, 'r1', 't1')
     expect(result?.manifestation_url).toBeNull()
@@ -118,26 +87,26 @@ describe('unbindManifestation', () => {
 
 describe('listManifestationsByThread', () => {
   it('返回当前绑定的 URL', async () => {
-    const mockDb: any = {
+    const mockDb = {
       select: vi.fn(() => ({
         from: vi.fn(() => ({
           where: vi.fn(() => ([{ url: 'https://example.com' }])),
         })),
       })),
-    }
+    } as unknown as ManifestationDb
 
     const urls = await listManifestationsByThread(mockDb, 'r1', 't1')
     expect(urls).toEqual(['https://example.com'])
   })
 
   it('未绑定时返回空数组', async () => {
-    const mockDb: any = {
+    const mockDb = {
       select: vi.fn(() => ({
         from: vi.fn(() => ({
           where: vi.fn(() => ([])),
         })),
       })),
-    }
+    } as unknown as ManifestationDb
 
     const urls = await listManifestationsByThread(mockDb, 'r1', 't1')
     expect(urls).toEqual([])

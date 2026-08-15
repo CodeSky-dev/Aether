@@ -49,7 +49,7 @@ const MANIFESTATIONS_KEY = 'manifestations'
  * 从 Y.Doc 获取 manifestations Y.Map。
  * 若不存在则创建（首次调用时自动初始化）。
  */
-export function getManifestationsMap(doc: Y.Doc): Y.Map<Y.Map<any>> {
+export function getManifestationsMap(doc: Y.Doc): Y.Map<Y.Map<unknown>> {
   return doc.getMap(MANIFESTATIONS_KEY)
 }
 
@@ -76,7 +76,7 @@ export function createAnnotation(
   }
 
   const manifestations = getManifestationsMap(doc)
-  const yAnn = new Y.Map<any>()
+  const yAnn = new Y.Map<unknown>()
   yAnn.set('id', annotation.id)
   yAnn.set('threadId', annotation.threadId)
   yAnn.set('file', annotation.file)
@@ -147,7 +147,7 @@ export function listAnnotationsByThread(
   manifestations.forEach((yAnn, key) => {
     if (!key.startsWith(`${threadId}:`)) return
 
-    const resolved = yAnn.get('resolved') ?? false
+    const resolved = (yAnn.get('resolved') as boolean) ?? false
     if (!includeResolved && resolved) return
 
     results.push({
@@ -161,9 +161,9 @@ export function listAnnotationsByThread(
       authorType: (yAnn.get('authorType') as 'human' | 'entity'),
       createdAt: yAnn.get('createdAt') as number,
       resolved,
-      metadata: yAnn.has('metadata')
-        ? JSON.parse(yAnn.get('metadata') as string)
-        : undefined,
+      ...(yAnn.has('metadata')
+        ? { metadata: JSON.parse(yAnn.get('metadata') as string) as Record<string, unknown> }
+        : {}),
     })
   })
 
@@ -193,7 +193,7 @@ export function listAllAnnotations(
   const results: InlineAnnotation[] = []
 
   manifestations.forEach((yAnn) => {
-    const resolved = yAnn.get('resolved') ?? false
+    const resolved = (yAnn.get('resolved') as boolean) ?? false
     if (!includeResolved && resolved) return
 
     results.push({
@@ -207,9 +207,9 @@ export function listAllAnnotations(
       authorType: (yAnn.get('authorType') as 'human' | 'entity'),
       createdAt: yAnn.get('createdAt') as number,
       resolved,
-      metadata: yAnn.has('metadata')
-        ? JSON.parse(yAnn.get('metadata') as string)
-        : undefined,
+      ...(yAnn.has('metadata')
+        ? { metadata: JSON.parse(yAnn.get('metadata') as string) as Record<string, unknown> }
+        : {}),
     })
   })
 
@@ -239,9 +239,9 @@ export function getAnnotation(
     authorId: yAnn.get('authorId') as string,
     authorType: (yAnn.get('authorType') as 'human' | 'entity'),
     createdAt: yAnn.get('createdAt') as number,
-    resolved: yAnn.get('resolved') ?? false,
-    metadata: yAnn.has('metadata')
-      ? JSON.parse(yAnn.get('metadata') as string)
-      : undefined,
+    resolved: (yAnn.get('resolved') as boolean) ?? false,
+    ...(yAnn.has('metadata')
+      ? { metadata: JSON.parse(yAnn.get('metadata') as string) as Record<string, unknown> }
+      : {}),
   }
 }

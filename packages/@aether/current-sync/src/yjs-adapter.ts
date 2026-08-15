@@ -130,7 +130,7 @@ export function subscribeDocUpdates(
 export function subscribePartitionUpdates<T extends YDocPartitionKey>(
   doc: Y.Doc,
   key: T,
-  listener: (events: Y.YEvent<any>[], transaction: Y.Transaction) => void,
+  listener: (events: Y.YEvent<Y.AbstractType<unknown>>[], transaction: Y.Transaction) => void,
 ): () => void {
   const partition = getPartition(doc, key)
   partition.observeDeep(listener)

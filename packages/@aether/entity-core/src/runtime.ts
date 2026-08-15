@@ -171,9 +171,9 @@ export class EntityRuntime {
       iteration++
 
       const result = await this.model.generateText({
-        model: this.model as unknown,
+        model: this.model,
         messages: allMessages,
-        tools: boundTools as Record<string, EntityToolDefinition>,
+        tools: boundTools,
         maxSteps: 1,
       })
 
@@ -206,7 +206,7 @@ export class EntityRuntime {
 
           // Check handoff requirement
           let handoffRequired = false
-          let handoffApproved = false
+          const handoffApproved = false
 
           if (toolDef.requiresHandoff && this.handoffGate) {
             handoffRequired = true

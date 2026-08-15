@@ -45,11 +45,11 @@ function createMockDb(initialThreads: MockThread[] = []) {
         project_id: params[2] as string,
         title: params[3] as string,
         status: params[4] as string,
-        code_anchor: params[5],
-        manifestation_url: params[6],
-        dialogue_ref: params[7],
-        resolution_contract: params[8],
-        parent_thread_id: params[9],
+        code_anchor: params[5] as Record<string, unknown>,
+        manifestation_url: params[6] as string | null,
+        dialogue_ref: params[7] as string | null,
+        resolution_contract: params[8] as Record<string, unknown> | null,
+        parent_thread_id: params[9] as string | null,
         created_at: new Date('2026-01-01T00:00:00Z'),
         updated_at: new Date('2026-01-01T00:00:00Z'),
       }
@@ -81,10 +81,10 @@ function createMockDb(initialThreads: MockThread[] = []) {
         const colMatches = [...setClause.matchAll(/"(\w+)"\s*=\s*\$\d+/g)]
         for (const colMatch of colMatches) {
           const colName = colMatch[1] as keyof MockThread
-          const placeholder = colMatch[0]!.match(/\$(\d+)/)
+          const placeholder = colMatch[0].match(/\$(\d+)/)
           const paramIdx = placeholder ? parseInt(placeholder[1]!, 10) - 1 : -1
           if (paramIdx >= 0) {
-            (target as any)[colName] = params[paramIdx]
+            (target as Record<string, unknown>)[colName] = params[paramIdx] as unknown
           }
         }
       }

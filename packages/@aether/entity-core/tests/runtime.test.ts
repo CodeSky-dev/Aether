@@ -4,10 +4,10 @@ import {
   EntityRuntime,
   EntityHandoffRequiredError,
   createEntityRuntime,
-  type EntityChatMessage,
   type EntityLanguageModel,
   type EntityToolDefinition,
 } from '../src/runtime.js'
+import type { AuditDb } from '../src/audit.js'
 import {
   declareCapabilityManifesto,
   type CapabilityManifesto,
@@ -39,19 +39,19 @@ function createMockEntity(manifesto: CapabilityManifesto) {
 function createMockModel(responses: Map<string, { text: string; toolCalls?: Array<{ toolName: string; args: Record<string, unknown> }> }>): EntityLanguageModel {
   let callCount = 0
   return {
-    async generateText(options) {
+    generateText(options) {
       callCount++
       const key = (options.messages?.map(m => `${m.role}:${m.content}`).join('|')) ?? ''
       const response = responses.get(key) ?? responses.get('*') ?? { text: 'fallback response' }
       // First call returns tool calls, subsequent calls return just text
       const hasToolCalls = response.toolCalls && response.toolCalls.length > 0
       if (callCount === 1 && hasToolCalls) {
-        return {
+        return Promise.resolve({
           text: response.text,
           toolCalls: response.toolCalls,
-        }
+        })
       }
-      return { text: response.text }
+      return Promise.resolve({ text: response.text })
     },
   }
 }
@@ -103,7 +103,7 @@ describe('EntityRuntime - 基础对话', () => {
   })
 
   it('chat 返回 AI 回复', async () => {
-    const result = await runtime.chat(mockDb as any, REALM_ID, [
+    const result = await runtime.chat(mockDb as unknown as AuditDb, REALM_ID, [
       { role: 'user', content: 'Hi' },
     ])
     expect(result.reply).toBe('Hello! I am TestEntity.')
@@ -112,7 +112,7 @@ describe('EntityRuntime - 基础对话', () => {
   })
 
   it('维护对话历史', async () => {
-    await runtime.chat(mockDb as any, REALM_ID, [
+    await runtime.chat(mockDb as unknown as AuditDb, REALM_ID, [
       { role: 'user', content: 'First' },
     ])
     const history = runtime.getConversationHistory()
@@ -130,7 +130,7 @@ describe('EntityRuntime - 基础对话', () => {
     const entity = { ...createMockEntity(manifesto), status: 'idle' as const }
     const model = createMockModel(new Map([['*', { text: 'X' }]]))
     const rt = new EntityRuntime({ entity, model, manifesto })
-    await expect(rt.chat(mockDb as any, REALM_ID, [{ role: 'user', content: 'Hi' }]))
+    await expect(rt.chat(mockDb as unknown as AuditDb, REALM_ID, [{ role: 'user', content: 'Hi' }]))
       .rejects.toThrow(/not active/)
   })
 })
@@ -163,26 +163,26 @@ describe('EntityRuntime - 工具调用', () => {
       search: {
         description: 'Search codebase',
         parameters: { type: 'object', properties: { query: { type: 'string' } } },
-        async execute(args) {
-          toolExecutionLog.push(`search:${args.query}`)
-          return { results: ['file1.ts', 'file2.ts'] }
+        execute(args) {
+          toolExecutionLog.push(`search:${String(args.query)}`)
+          return Promise.resolve({ results: ['file1.ts', 'file2.ts'] })
         },
       },
       edit: {
         description: 'Edit file',
         parameters: { type: 'object', properties: { file: { type: 'string' } } },
-        async execute(args) {
-          toolExecutionLog.push(`edit:${args.file}`)
-          return { success: true }
+        execute(args) {
+          toolExecutionLog.push(`edit:${String(args.file)}`)
+          return Promise.resolve({ success: true })
         },
         requiresHandoff: false,
       },
       dangerous_delete: {
         description: 'Delete file',
         parameters: {},
-        async execute() {
+        execute() {
           toolExecutionLog.push('delete')
-          return { deleted: true }
+          return Promise.resolve({ deleted: true })
         },
         requiresHandoff: true,
       },
@@ -190,7 +190,7 @@ describe('EntityRuntime - 工具调用', () => {
   })
 
   it('manifesto 白名单内的工具可被调用', async () => {
-    const result = await runtime.chat(mockDb as any, REALM_ID, [
+    const result = await runtime.chat(mockDb as unknown as AuditDb, REALM_ID, [
       { role: 'user', content: 'Find the bug' },
     ], tools)
     expect(result.toolCalls).toHaveLength(1)
@@ -198,7 +198,7 @@ describe('EntityRuntime - 工具调用', () => {
     expect(toolExecutionLog).toContain('search:bug')
   })
 
-  it('manifesto 白名单外的工具被过滤', async () => {
+  it('manifesto 白名单外的工具被过滤', () => {
     // dangerous_delete 不在 available_tools 中，应被过滤
     const filtered = runtime['filterToolsByManifesto'](tools)
     expect(filtered).toHaveProperty('search')
@@ -207,7 +207,7 @@ describe('EntityRuntime - 工具调用', () => {
   })
 
   it('空工具列表时不报错', async () => {
-    const result = await runtime.chat(mockDb as any, REALM_ID, [
+    const result = await runtime.chat(mockDb as unknown as AuditDb, REALM_ID, [
       { role: 'user', content: 'Hello' },
     ])
     expect(result.reply).toBeTruthy()
@@ -245,15 +245,15 @@ describe('EntityRuntime - HandoffGate 集成', () => {
       delete_file: {
         description: 'Delete a file',
         parameters: { type: 'object' },
-        async execute() {
-          return { deleted: true }
+        execute() {
+          return Promise.resolve({ deleted: true })
         },
         requiresHandoff: true,
       },
     }
 
     await expect(
-      runtime.chat(mockDb as any, REALM_ID, [
+      runtime.chat(mockDb as unknown as AuditDb, REALM_ID, [
         { role: 'user', content: 'Delete this file' },
       ], tools),
     ).rejects.toThrow(EntityHandoffRequiredError)
@@ -309,7 +309,7 @@ describe('createEntityRuntime 工厂', () => {
     expect(() => createEntityRuntime({
       entity,
       model,
-      manifesto: { capabilities: 42 } as any,
+      manifesto: { capabilities: 42 } as unknown as CapabilityManifesto,
     })).toThrow(/Invalid entity manifesto/)
   })
 })
@@ -323,7 +323,7 @@ describe('EntityRuntime - 流式对话', () => {
     const mockDb = createMockDb()
 
     const tokens: string[] = []
-    const result = await runtime.streamChat(mockDb as any, REALM_ID, [
+    const result = await runtime.streamChat(mockDb as unknown as AuditDb, REALM_ID, [
       { role: 'user', content: 'Hi' },
     ], undefined, {
       onToken: (t) => tokens.push(t),
