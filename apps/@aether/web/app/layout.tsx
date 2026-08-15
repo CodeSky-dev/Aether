@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 
 import './globals.css'
+import NavShell from '@/components/nav-shell'
 
 export const metadata: Metadata = {
   title: 'Aether',
@@ -16,7 +17,9 @@ export default function RootLayout({
 }): ReactNode {
   return (
     <html lang="zh-CN">
-      <body>{children}</body>
+      <body>
+        <NavShell>{children}</NavShell>
+      </body>
     </html>
   )
 }

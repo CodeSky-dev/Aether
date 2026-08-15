@@ -107,7 +107,7 @@ export default function HomePage() {
 
       <footer className="border-t border-border pt-6">
         <p className="text-label-12 text-neutral-7">
-          M0 基础设施已就绪 · M1 Current 引擎推进中
+          M0–M2 引擎已就绪 · M3.5 Web UI 已完成 · M3 企业级特性推进中
         </p>
       </footer>
     </main>

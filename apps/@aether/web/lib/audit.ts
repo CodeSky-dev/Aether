@@ -1,0 +1,57 @@
+// @aether/web · Audit 记录 Server Actions
+'use server'
+
+import { getDb } from '@/lib/db'
+import { auditLog } from '@aether/db'
+import { desc, eq } from 'drizzle-orm'
+import type { ActorType, AuditAction } from '@aether/types'
+
+export interface AuditRow {
+  id: string
+  actor_type: ActorType
+  actor_id: string
+  action: AuditAction
+  doc_ref?: string
+  entity_id?: string
+  payload_hash: string
+  created_at: Date
+}
+
+export interface ListAuditLogsInput {
+  realmId: string
+  /** 默认按 created_at 降序，最多返回 100 条 */
+  limit?: number
+  actorType?: ActorType
+  action?: AuditAction
+}
+
+export async function listAuditLogs(input: ListAuditLogsInput): Promise<AuditRow[]> {
+  const db = getDb()
+  const limit = input.limit ?? 100
+  const conditions = [eq(auditLog.realm_id, input.realmId)]
+  if (input.actorType) conditions.push(eq(auditLog.actor_type, input.actorType))
+  if (input.action) conditions.push(eq(auditLog.action, input.action))
+  const rows = await db
+    .select()
+    .from(auditLog)
+    .where(conditions.length === 1 ? conditions[0] : undefined)
+    .orderBy(desc(auditLog.created_at))
+    .limit(limit)
+  return rows
+    .map((r) => {
+      const target = r.target as Record<string, unknown>
+      const docRef = target.doc_ref as string | undefined
+      const entityId = target.entity_id as string | undefined
+      return {
+        id: r.id,
+        realm_id: r.realm_id,
+        actor_type: r.actor_type,
+        actor_id: r.actor_id,
+        action: r.action,
+        payload_hash: r.payload_hash,
+        created_at: r.created_at,
+        ...(docRef !== undefined ? { doc_ref: docRef } : {}),
+        ...(entityId !== undefined ? { entity_id: entityId } : {}),
+      }
+    })
+}
