@@ -333,20 +333,21 @@ export class EntityRuntime {
   /**
    * 更新实体的 memory_ref（跨 Thread 上下文记忆）。
    */
-  updateMemory(
+  async updateMemory(
     db: AuditDb,
     realmId: string,
     updates: Record<string, unknown>,
   ): Promise<void> {
-    // Memory persistence is handled by entity-core identity module.
-    // This method provides a convenience hook for runtime to signal memory changes.
-    return recordEntityAction(db, realmId, this.entity.id, {
+    // Log the memory update to audit trail
+    await recordEntityAction(db, realmId, this.entity.id, {
       action: 'write',
       target: { type: 'memory_update' },
       payload: updates,
       idempotencyKey: `memory-${Date.now()}`,
       result: { updatedKeys: Object.keys(updates) },
-    }).then(() => undefined)
+    });
+    // Persist memory_ref to entity record
+    this.entity.memory_ref = Object.assign({}, this.entity.memory_ref as Record<string, unknown>, updates);
   }
 }
 

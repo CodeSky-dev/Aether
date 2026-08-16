@@ -43,11 +43,11 @@ export const REALM_STATEMENT_SET: ReadonlySet<string> = new Set(REALM_STATEMENTS
 // 与 @aether/types CapabilityManifesto 在结构上同构（jsonb 落库兼容）
 export interface CapabilityManifesto {
   /** Entity 自描述的业务能力标签（如 "code-review"、"thread-summary"） */
-  capabilities: readonly string[]
+  capabilities: string[]
   /** 申请的 Realm 授权语句；生效需 Realm Admin 在 member.entitlements 中确认 */
-  permission_scopes: readonly RealmStatement[]
+  permission_scopes: RealmStatement[]
   /** 可调用的工具白名单；空数组表示无工具能力 */
-  available_tools: readonly string[]
+  available_tools: string[]
   /** manifesto 版本，便于演进 */
   schema_version: number
 }
@@ -59,14 +59,14 @@ export const MANIFESTO_SCHEMA_VERSION = 1
 
 export interface ManifestoValidationResult {
   ok: boolean
-  errors: readonly string[]
+  errors: string[]
   manifesto: CapabilityManifesto | null
 }
 
 export interface DeclareManifestoInput {
-  capabilities?: readonly string[]
-  permission_scopes?: readonly RealmStatement[]
-  available_tools?: readonly string[]
+  capabilities?: string[]
+  permission_scopes?: RealmStatement[]
+  available_tools?: string[]
   schema_version?: number
 }
 
@@ -78,9 +78,9 @@ export function declareCapabilityManifesto(
   input: DeclareManifestoInput = {},
 ): CapabilityManifesto {
   return {
-    capabilities: dedupe(input.capabilities ?? []),
-    permission_scopes: dedupe(input.permission_scopes ?? []),
-    available_tools: dedupe(input.available_tools ?? []),
+    capabilities: [...dedupe(input.capabilities ?? [])],
+    permission_scopes: [...dedupe(input.permission_scopes ?? [])],
+    available_tools: [...dedupe(input.available_tools ?? [])],
     schema_version: input.schema_version ?? MANIFESTO_SCHEMA_VERSION,
   }
 }

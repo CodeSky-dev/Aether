@@ -16,6 +16,11 @@ Aether 是协同智能的介质：承载人、Entity、代码与上下文共存�
 | [roadmap/risks.md](./roadmap/risks.md) | 关键技术风险、监控指标与降级方案 | 8 |
 | [roadmap/probes/yjs-serverless.md](./roadmap/probes/yjs-serverless.md) | Yjs Serverless 持久化与连接管理技术探测报告 | 9 |
 | [roadmap/team-norms.md](./roadmap/team-norms.md) | 团队协作规范与检查清单 | 10 |
+| [specs/m35-web-ui-foundation.md](./specs/m35-web-ui-foundation.md) | M3.5 Web UI 基础层规范 | 11 |
+| [specs/m35-plan.md](./specs/m35-plan.md) | M3.5 实施计划 | 12 |
+| [specs/m36-audit-vault.md](./specs/m36-audit-vault.md) | M3.6 Audit Vault 规范 | 13 |
+| [specs/m36-plan.md](./specs/m36-plan.md) | M3.6 实施计划 | 14 |
+| [specs/m37-manifestation-binding.md](./specs/m37-manifestation-binding.md) | M3.7 Manifestation Binding 规范 | 15 |
 
 ## 阅读顺序
 
