@@ -29,6 +29,7 @@ export function createAuth(options: CreateAuthOptions) {
         roles: realmRoles,
         allowUserToCreateOrganization: false,
         creatorRole: 'owner',
+        // eslint-disable-next-line @typescript-eslint/require-await
         sendInvitationEmail: async ({ email, organization, role }) => {
           // P3-29 修复：SSO/SCIM 落地前至少打日志，避免静默丢弃邀请
           // eslint-disable-next-line no-console
