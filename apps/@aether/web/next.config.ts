@@ -4,10 +4,8 @@
 import type { NextConfig } from 'next'
 const config: NextConfig = {
   reactStrictMode: true,
-  // P2-20 修复：配置 allowedHosts，允许在线预览域名访问 dev server
-  experimental: {
-    allowedHosts: ['.monkeycode-ai.online'],
-  },
+  // 允许在线预览域名访问 dev server（Next 16 使用 allowedDevOrigins 替代旧 experimental.allowedHosts）
+  allowedDevOrigins: ['.monkeycode-ai.online'],
   transpilePackages: [
     '@aether/current-sync',
     '@aether/db',
