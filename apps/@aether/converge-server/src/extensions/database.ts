@@ -17,10 +17,8 @@ import {
 import type { ActorType } from '@aether/types'
 import { applyUpdate } from 'yjs'
 import { parseDocumentName } from '../document-name.js'
-
-/** 读取全量增量时的 limit 上限（防止极端情况下的 OOM） */
-const MAX_LOAD_LIMIT = 10_000
-
+/** 单次读取增量的分页大小（防止极端情况下的 OOM） */
+const LOAD_PAGE_SIZE = 10_000
 export interface AetherDatabaseExtensionOptions {
   /** drizzle 实例（测试时注入 mock；运行时用 getDb()） */
   db: UpdateLogDb
@@ -29,7 +27,6 @@ export interface AetherDatabaseExtensionOptions {
   /** 默认 actorId */
   actorId?: string
 }
-
 /**
  * Aether Database Extension for Hocuspocus。
  * 把 Yjs 文档变更持久化到 @aether/db 的 crdt_updates 表。
@@ -40,13 +37,11 @@ export class AetherDatabaseExtension implements Extension {
   private readonly defaultActorType: ActorType
   private readonly defaultActorId: string
   private idempotencyCounter = 0
-
   public constructor(options: AetherDatabaseExtensionOptions) {
     this.db = options.db
     this.defaultActorType = options.actorType ?? 'entity'
     this.defaultActorId = options.actorId ?? 'hocuspocus-server'
   }
-
   /**
    * 冷启动：读取所有增量合并成全量状态应用到 Document。
    * Hocuspocus 在首次加载文档时调用。
@@ -55,15 +50,30 @@ export class AetherDatabaseExtension implements Extension {
     data: onLoadDocumentPayload,
   ): Promise<void> {
     const { realmId, docRef } = parseDocumentName(data.documentName)
-    const records = await readCrdtUpdatesSince(this.db, realmId, docRef, {
-      afterSeq: 0,
-      limit: MAX_LOAD_LIMIT,
-    })
-    for (const record of records) {
-      applyUpdate(data.document, record.payload)
+    // P2-14 修复：循环翻页加载全部增量，不再静默截断前 10000 条
+    let afterSeq = 0
+    let totalLoaded = 0
+    while (true) {
+      const records = await readCrdtUpdatesSince(this.db, realmId, docRef, {
+        afterSeq,
+        limit: LOAD_PAGE_SIZE,
+      })
+      if (records.length === 0) break
+      for (const record of records) {
+        applyUpdate(data.document, record.payload)
+      }
+      totalLoaded += records.length
+      afterSeq = records[records.length - 1]!.seq
+      if (records.length < LOAD_PAGE_SIZE) break
+    }
+    if (totalLoaded >= LOAD_PAGE_SIZE) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[converge-server] Loaded ${totalLoaded} updates for ${docRef}; ` +
+          'consider compacting the document to a snapshot for faster cold starts.',
+      )
     }
   }
-
   /**
    * 实时追加：每条编辑的增量 update 落库到 crdt_updates。
    * Hocuspocus 在文档变更时调用（每条 update 触发一次）。
@@ -81,7 +91,6 @@ export class AetherDatabaseExtension implements Extension {
       idempotencyKey: this.generateIdempotencyKey(data.socketId),
     })
   }
-
   /**
    * 解析 actor 身份。
    * M1 阶段使用默认值；后续 M2 auth extension 可从 data.context 提取真实身份。
@@ -103,7 +112,6 @@ export class AetherDatabaseExtension implements Extension {
       actorId: this.defaultActorId,
     }
   }
-
   /**
    * 生成幂等键：hocuspocus:{socketId}:{timestamp}:{counter}
    * socketId 标识来源连接，timestamp + counter 保证唯一性。

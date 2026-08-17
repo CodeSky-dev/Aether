@@ -1,16 +1,15 @@
 // @aether/web · 新建 Realm 表单（Client Component）
 'use client'
-
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createRealm } from '@/lib/realms'
-
 export default function CreateRealmForm() {
+  const router = useRouter()
   const [slug, setSlug] = useState('')
   const [name, setName] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState<string | null>(null)
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!slug.trim() || !name.trim()) return
@@ -21,14 +20,14 @@ export default function CreateRealmForm() {
       setCreated(result.id)
       setSlug('')
       setName('')
-      setTimeout(() => window.location.reload(), 300)
+      // P2-10 修复：使用 router.refresh() 替代 window.location.reload()
+      router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
       setSubmitting(false)
     }
   }
-
   return (
     <form onSubmit={(e) => { void handleSubmit(e) }} className="flex w-72 flex-col gap-2">
       <input

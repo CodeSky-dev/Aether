@@ -14,27 +14,22 @@ import { Hocuspocus } from '@hocuspocus/server'
 import { getDb } from './db.js'
 import { AetherDatabaseExtension } from './extensions/database.js'
 import { createRedisExtension } from './extensions/redis.js'
-
 const PORT = parseInt(process.env.PORT ?? '1234', 10)
 const REDIS_URL = process.env.REDIS_URL
-
 async function main() {
   const db = getDb()
   const extensions = []
-
   // Database extension: 接入 @aether/db crdt_updates 表
   extensions.push(new AetherDatabaseExtension({ db }))
-
   // Redis extension: 多实例广播 seam（可选）
+  // P2-15 修复：配置了 REDIS_URL 但依赖缺失时 createRedisExtension 会 throw，
+  // 由 main().catch() 捕获并退出，避免静默降级为单实例模式。
   if (REDIS_URL) {
     const redisExt = await createRedisExtension({ redisUrl: REDIS_URL })
-    if (redisExt) {
-      extensions.push(redisExt)
-      // eslint-disable-next-line no-console
-      console.log('[converge-server] Redis extension enabled for multi-instance broadcast.')
-    }
+    extensions.push(redisExt)
+    // eslint-disable-next-line no-console
+    console.log('[converge-server] Redis extension enabled for multi-instance broadcast.')
   }
-
   const server = new Hocuspocus({
     name: 'aether-converge',
     port: PORT,
@@ -58,7 +53,6 @@ async function main() {
       return Promise.resolve()
     },
   })
-
   // 优雅关闭
   const shutdown = async () => {
     // eslint-disable-next-line no-console
@@ -72,10 +66,8 @@ async function main() {
   process.on('SIGTERM', () => {
     void shutdown()
   })
-
   await server.listen()
 }
-
 main().catch((err) => {
   // eslint-disable-next-line no-console
   console.error('[converge-server] Fatal error:', err)
