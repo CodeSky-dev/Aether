@@ -1,6 +1,7 @@
 {
   "name": "@aether/ui",
   "version": "0.0.1",
+  "private": true,
   "description": "Aether design system: Yohaku tokens, AI-readable contract, and HTML mockup templates.",
   "type": "module",
   "exports": {

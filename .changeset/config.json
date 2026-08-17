@@ -18,6 +18,7 @@
     "@aether/resonance",
     "@aether/state",
     "@aether/thread-bindings",
-    "@aether/types"
+    "@aether/types",
+    "@aether/ui"
   ]
 }
