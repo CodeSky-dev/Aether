@@ -17,7 +17,7 @@ export interface RedisExtensionOptions {
  */
 export async function createRedisExtension(
   options: RedisExtensionOptions,
-): Promise<Extension | null> {
+): Promise<Extension> {
   try {
     const mod = await import('@hocuspocus/extension-redis')
     const RedisExtension = mod.Redis ?? mod.default
