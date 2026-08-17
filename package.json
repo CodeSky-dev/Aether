@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "turbo run build",
+    "changeset": "pnpm dlx @changesets/cli",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
