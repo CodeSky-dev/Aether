@@ -5,7 +5,7 @@
 import { z } from 'zod'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const ISO8601_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(.\d+)?(Z|[+-]\d{2}:\d{2})$/
+const ISO8601_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/
 
 const UUIDSchema = z.string().regex(UUID_REGEX, 'Invalid UUID format')
 const ISO8601Schema = z.string().regex(ISO8601_REGEX, 'Invalid ISO8601 datetime format')

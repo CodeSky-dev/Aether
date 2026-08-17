@@ -24,9 +24,9 @@ function createMockEntity(manifesto: CapabilityManifesto) {
     auth_identity_id: 'auth-0001',
     display_name: 'TestEntity',
     capability_manifesto: {
-      capabilities: manifesto.capabilities as string[],
-      permission_scopes: manifesto.permission_scopes as string[],
-      available_tools: manifesto.available_tools as string[],
+      capabilities: manifesto.capabilities,
+      permission_scopes: manifesto.permission_scopes,
+      available_tools: manifesto.available_tools,
       schema_version: manifesto.schema_version,
     },
     status: 'active' as const,

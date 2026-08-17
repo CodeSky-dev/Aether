@@ -96,7 +96,8 @@ function createMockDb(initialThreads: MockThread[] = [], initialMessages: MockMs
           const placeholder = colMatch[0].match(/\$(\d+)/)
           const paramIdx = placeholder ? parseInt(placeholder[1]!, 10) - 1 : -1
           if (paramIdx >= 0) {
-            (target as Record<string, unknown>)[colName] = params[paramIdx] as unknown
+            (target as unknown as Record<string, unknown>)[colName] =
+              params[paramIdx] as unknown
           }
         }
       }

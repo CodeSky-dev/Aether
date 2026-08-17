@@ -3,7 +3,7 @@
 
 import { getDb } from '@/lib/db'
 import { auditLog } from '@aether/db'
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import type { ActorType, AuditAction } from '@aether/types'
 
 export interface AuditRow {
@@ -34,7 +34,7 @@ export async function listAuditLogs(input: ListAuditLogsInput): Promise<AuditRow
   const rows = await db
     .select()
     .from(auditLog)
-    .where(conditions.length === 1 ? conditions[0] : undefined)
+    .where(and(...conditions))
     .orderBy(desc(auditLog.created_at))
     .limit(limit)
   return rows
