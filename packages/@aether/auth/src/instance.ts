@@ -29,11 +29,11 @@ export function createAuth(options: CreateAuthOptions) {
         roles: realmRoles,
         allowUserToCreateOrganization: false,
         creatorRole: 'owner',
-        sendInvitationEmail: async ({ email, organizationId, role }) => {
+        sendInvitationEmail: async ({ email, organization, role }) => {
           // P3-29 修复：SSO/SCIM 落地前至少打日志，避免静默丢弃邀请
           // eslint-disable-next-line no-console
           console.log(
-            `[auth] Invitation email (placeholder): to=${email} org=${organizationId} role=${role}`,
+            `[auth] Invitation email (placeholder): to=${email} org=${organization.id} role=${role}`,
           )
         },
       }),
