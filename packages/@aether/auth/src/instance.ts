@@ -4,9 +4,7 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { organization } from 'better-auth/plugins'
-
 import { realmAccessControl, realmRoles } from './permissions.js'
-
 export interface CreateAuthOptions {
   /** 已配置 schema 的 Drizzle pg 实例（含 @aether/auth schema 与 @aether/db schema）。 */
   db: Parameters<typeof drizzleAdapter>[0]
@@ -16,10 +14,8 @@ export interface CreateAuthOptions {
   /** 透传给 betterAuth 的额外选项（如 emailAndPassword、socialProviders）。 */
   options?: Omit<BetterAuthOptions, 'database' | 'baseURL' | 'secret' | 'trustedOrigins' | 'plugins'>
 }
-
 export function createAuth(options: CreateAuthOptions) {
   const { db, baseURL, secret, trustedOrigins, options: extra } = options
-
   return betterAuth({
     database: drizzleAdapter(db, {
       provider: 'pg',
@@ -33,11 +29,16 @@ export function createAuth(options: CreateAuthOptions) {
         roles: realmRoles,
         allowUserToCreateOrganization: false,
         creatorRole: 'owner',
-        sendInvitationEmail: async () => {},
+        sendInvitationEmail: async ({ email, organizationId, role }) => {
+          // P3-29 修复：SSO/SCIM 落地前至少打日志，避免静默丢弃邀请
+          // eslint-disable-next-line no-console
+          console.log(
+            `[auth] Invitation email (placeholder): to=${email} org=${organizationId} role=${role}`,
+          )
+        },
       }),
     ],
     ...extra,
   })
 }
-
 export type AuthInstance = ReturnType<typeof createAuth>

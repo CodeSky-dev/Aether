@@ -14,7 +14,6 @@ import {
   bigserial,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core'
-
 // bytea：drizzle 0.45 的 pg-core 未内置二进制列，用 customType 声明。
 // data 侧为 Uint8Array（与 yjs 增量字节序一致），driver 侧交给连接驱动编码。
 const bytea = customType<{
@@ -28,35 +27,29 @@ const bytea = customType<{
     return Buffer.from(value)
   },
 })
-
 export const actorTypeEnum = pgEnum('actor_type', ['human', 'entity'])
-
 export const memberStatusEnum = pgEnum('member_status', [
   'active',
   'suspended',
   'invited',
 ])
-
 export const entityStatusEnum = pgEnum('entity_status', [
   'active',
   'idle',
   'waiting',
   'suspended',
 ])
-
 export const threadStatusEnum = pgEnum('thread_status', [
   'open',
   'in_review',
   'resolved',
   'archived',
 ])
-
 export const connectionStateEnum = pgEnum('connection_state', [
   'active',
   'drift',
   'converging',
 ])
-
 export const auditActionEnum = pgEnum('audit_action', [
   'read',
   'write',
@@ -64,15 +57,12 @@ export const auditActionEnum = pgEnum('audit_action', [
   'converse',
   'execute',
 ])
-
 export const dialogueRoleEnum = pgEnum('dialogue_role', [
   'user',
   'assistant',
   'system',
 ])
-
 // ---- realms（领域：隔离边界与权限树根）----
-
 export const realms = pgTable(
   'realms',
   {
@@ -89,11 +79,9 @@ export const realms = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [index('realms_slug_idx').on(t.slug)],
+  (t) => [uniqueIndex('realms_slug_uniq').on(t.slug)],
 )
-
 // ---- projects（Realm 二级节点）----
-
 export const projects = pgTable(
   'projects',
   {
@@ -115,9 +103,7 @@ export const projects = pgTable(
     index('projects_realm_slug_idx').on(t.realm_id, t.slug),
   ],
 )
-
 // ---- members（Realm 三级节点，人类与 Entity 双主体）----
-
 export const members = pgTable(
   'members',
   {
@@ -146,9 +132,7 @@ export const members = pgTable(
     index('members_status_idx').on(t.status),
   ],
 )
-
 // ---- entities（实体：AI 一等公民档案）----
-
 export const entities = pgTable(
   'entities',
   {
@@ -172,9 +156,7 @@ export const entities = pgTable(
     index('entities_auth_identity_idx').on(t.auth_identity_id),
   ],
 )
-
 // ---- threads（线程：Context-Bound 叙事单元）----
-
 export const threads = pgTable(
   'threads',
   {
@@ -209,9 +191,7 @@ export const threads = pgTable(
     index('threads_parent_idx').on(t.parent_thread_id),
   ],
 )
-
 // ---- currents（当前态：Yjs 连接实例与 Presence 状态流）----
-
 export const currents = pgTable(
   'currents',
   {
@@ -234,9 +214,7 @@ export const currents = pgTable(
   },
   (t) => [index('currents_doc_ref_idx').on(t.doc_ref)],
 )
-
 // ---- crdt_updates（CRDT 更新日志：Current 增量落库，仅追加）----
-
 export const crdtUpdates = pgTable(
   'crdt_updates',
   {
@@ -245,7 +223,8 @@ export const crdtUpdates = pgTable(
       .notNull()
       .references(() => realms.id),
     doc_ref: text('doc_ref').notNull(),
-    // 每个 doc_ref 单调递增的重放游标；重复追加幂等
+    // bigserial 是表级共享序列，per-doc_ref 存在空洞但仍保证全局单调递增；
+    // 重放时按 (doc_ref, seq) 排序即可，空洞不影响正确性。
     seq: bigserial('seq', { mode: 'number' }).notNull(),
     payload: bytea('payload').notNull(),
     actor_type: actorTypeEnum('actor_type').notNull(),
@@ -261,9 +240,7 @@ export const crdtUpdates = pgTable(
     index('crdt_updates_realm_doc_seq_idx').on(t.realm_id, t.doc_ref, t.seq),
   ],
 )
-
 // ---- audit_log（审计轨迹：人类与 Entity 行为统一入账）----
-
 export const auditLog = pgTable(
   'audit_log',
   {
@@ -291,12 +268,10 @@ export const auditLog = pgTable(
     index('audit_log_action_created_idx').on(t.action, t.created_at),
   ],
 )
-
 // ---- dialogue_messages（对话消息：Thread 内嵌的 Entity 对话历史）----
 // threads.dialogue_ref 指向 dialogue_id，将一组对话消息绑定到 Thread。
 // 每条消息记录 actor（人/Entity）、role（user/assistant/system）与内容，
 // 形成可引用的决策记录（Dialogue Forging）。
-
 export const dialogueMessages = pgTable(
   'dialogue_messages',
   {

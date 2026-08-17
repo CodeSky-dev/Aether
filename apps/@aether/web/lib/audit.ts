@@ -1,13 +1,14 @@
 // @aether/web · Audit 记录 Server Actions
 'use server'
-
 import { getDb } from '@/lib/db'
 import { auditLog } from '@aether/db'
 import { and, desc, eq } from 'drizzle-orm'
 import type { ActorType, AuditAction } from '@aether/types'
-
+import { requireRealmAccess } from '@/lib/auth-guard'
 export interface AuditRow {
   id: string
+  // P2-12 修复：realm_id 是 map 返回的实际字段，补进接口避免契约外字段漂移
+  realm_id: string
   actor_type: ActorType
   actor_id: string
   action: AuditAction
@@ -16,7 +17,6 @@ export interface AuditRow {
   payload_hash: string
   created_at: Date
 }
-
 export interface ListAuditLogsInput {
   realmId: string
   /** 默认按 created_at 降序，最多返回 100 条 */
@@ -24,8 +24,9 @@ export interface ListAuditLogsInput {
   actorType?: ActorType
   action?: AuditAction
 }
-
 export async function listAuditLogs(input: ListAuditLogsInput): Promise<AuditRow[]> {
+  // P2-18 修复：鉴权守卫 —— 校验 realmId 格式与 Realm 存在性
+  await requireRealmAccess(input.realmId)
   const db = getDb()
   const limit = input.limit ?? 100
   const conditions = [eq(auditLog.realm_id, input.realmId)]

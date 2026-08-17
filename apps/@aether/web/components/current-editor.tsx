@@ -1,6 +1,5 @@
 // @aether/web · Yjs Current 编辑器组件（轮询通道 + Server Actions 落库 + Entity Presence 光标）
 'use client'
-
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as Y from 'yjs'
 import {
@@ -21,7 +20,6 @@ import {
   setPresence,
   type PresenceEntry,
 } from '@/lib/presence'
-
 interface CurrentEditorProps {
   realmId: string
   threadId: string
@@ -30,7 +28,6 @@ interface CurrentEditorProps {
   actorId?: string
   actorName?: string
 }
-
 interface RemoteCursor {
   sessionId: string
   actorName: string
@@ -39,12 +36,13 @@ interface RemoteCursor {
   selectionEnd: number | null
   color: string
 }
-
 const REMOTE_ORIGIN = Symbol('channel-remote')
 const CONTENT_MAP_KEY = 'content'
 const CONTENT_TEXT_KEY = 'text'
 const PRESENCE_POLL_MS = 2000
 const PRESENCE_HEARTBEAT_MS = 3000
+const CONNECT_RETRY_MS = 3000
+const CONNECT_MAX_RETRIES = 10
 const CURSOR_PALETTE = [
   '#8b5cf6', // violet
   '#3b82f6', // blue
@@ -53,7 +51,6 @@ const CURSOR_PALETTE = [
   '#14b8a6', // teal
   '#eab308', // yellow
 ]
-
 /** 会话 ID → 稳定配色（同一实体多次进入颜色一致） */
 function colorForSession(sessionId: string): string {
   let hash = 0
@@ -62,7 +59,6 @@ function colorForSession(sessionId: string): string {
   }
   return CURSOR_PALETTE[Math.abs(hash) % CURSOR_PALETTE.length]!
 }
-
 /** 确保 Y.Doc 内有 content Map + content Text，不存在则初始化。 */
 function ensureContentText(doc: Y.Doc): Y.Text {
   const map = doc.getMap(CONTENT_MAP_KEY)
@@ -72,14 +68,42 @@ function ensureContentText(doc: Y.Doc): Y.Text {
   map.set(CONTENT_TEXT_KEY, text)
   return text
 }
-
 function offsetToLineCol(text: string, offset: number): { line: number; col: number } {
   if (offset <= 0) return { line: 0, col: 0 }
   const truncated = text.slice(0, offset)
   const lines = truncated.split('\n')
   return { line: lines.length - 1, col: lines[lines.length - 1]!.length }
 }
-
+/**
+ * 计算两段文本的最小编辑：公共前缀 + 公共后缀，中间部分做 delete+insert。
+ * 避免每次 input 都全量 delete(0,len)+insert(0,newText) 产生巨大 Yjs update。
+ */
+function applyTextDiff(yText: Y.Text, oldText: string, newText: string): void {
+  if (oldText === newText) return
+  // 公共前缀长度
+  let prefixLen = 0
+  const minLen = Math.min(oldText.length, newText.length)
+  while (prefixLen < minLen && oldText[prefixLen] === newText[prefixLen]) {
+    prefixLen++
+  }
+  // 公共后缀长度（从末尾比较）
+  let suffixLen = 0
+  while (
+    suffixLen < minLen - prefixLen &&
+    oldText[oldText.length - 1 - suffixLen] === newText[newText.length - 1 - suffixLen]
+  ) {
+    suffixLen++
+  }
+  const deleteStart = prefixLen
+  const deleteCount = oldText.length - prefixLen - suffixLen
+  const insertText = newText.slice(prefixLen, newText.length - suffixLen)
+  if (deleteCount > 0) {
+    yText.delete(deleteStart, deleteCount)
+  }
+  if (insertText.length > 0) {
+    yText.insert(deleteStart, insertText)
+  }
+}
 export default function CurrentEditor({
   realmId,
   threadId,
@@ -90,7 +114,6 @@ export default function CurrentEditor({
   const docRef = `thread:${threadId}`
   const docRefRef = useRef(docRef)
   docRefRef.current = docRef
-
   const doc = useRef(new Y.Doc()).current
   const clientRef = useRef<{
     localSeq: number | null
@@ -109,28 +132,27 @@ export default function CurrentEditor({
   const [textValue, setTextValue] = useState('')
   // 每次挂载生成稳定会话 ID（同页多开可互相看到光标）
   const sessionIdRef = useRef(`session-${actorId}-${Math.random().toString(36).slice(2, 8)}`)
-
   // 初始化 Y.Doc：确保 content 分区存在
   useEffect(() => {
     ensureContentText(doc)
-
     // 监听本地 update → 落库
     const stopSubscribe = subscribeDocUpdates(doc, (update) => {
       const serialized = serializeUpdate(update)
+      setSaving(true)
       appendCurrentUpdate({
         realmId,
         docRef: docRefRef.current,
         serializedPayload: serialized,
         actorType,
         actorId,
-        idempotencyKey: `${actorId}:${Date.now()}-${Math.random()}`,
-      }).catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : String(err))
-        setSaving(false)
+        idempotencyKey: `${sessionIdRef.current}:${Date.now()}-${Math.random()}`,
       })
-      setSaving(true)
+        .then(() => setSaving(false))
+        .catch((err: unknown) => {
+          setError(err instanceof Error ? err.message : String(err))
+          setSaving(false)
+        })
     })
-
     // 轮询远端更新
     let pollTimer: ReturnType<typeof setInterval> | null = null
     const stopPolling = () => {
@@ -139,7 +161,6 @@ export default function CurrentEditor({
         pollTimer = null
       }
     }
-
     const pollOnce = async () => {
       const state = clientRef.current
       if (state.polling) return
@@ -154,7 +175,9 @@ export default function CurrentEditor({
             100,
           )
           for (const item of result.updates) {
-            if (item.idempotencyKey.startsWith(`${actorId}:`)) continue
+            // P0-1 修复：不再按 actorId 前缀跳过自己的更新。
+            // Yjs applyUpdate 对已包含内容幂等，服务端 (doc_ref, idempotency_key) 唯一约束已保证幂等。
+            // 按 actorId 跳过会导致同默认 actorId 的多客户端互相看不到更新。
             const payload = (() => {
               try {
                 return deserializeUpdate(item.serializedPayload)
@@ -176,33 +199,40 @@ export default function CurrentEditor({
         state.polling = false
       }
     }
-
     pollTimer = setInterval(() => {
       void pollOnce()
     }, 2000)
-
-    // 首次连接：获取当前游标 + 重放
-    getCurrentCursor(realmId, docRefRef.current)
-      .then(({ cursor }) => {
-        clientRef.current.remoteCursor = cursor
-        clientRef.current.localSeq = cursor
-        setConnected(true)
-      })
-      .catch(() => {
-        setConnected(false)
-      })
+    // 首次连接：获取当前游标 + 重放，失败时自动重试
+    let connectRetries = 0
+    let connectTimer: ReturnType<typeof setTimeout> | null = null
+    const tryConnect = () => {
+      getCurrentCursor(realmId, docRefRef.current)
+        .then(({ cursor }) => {
+          clientRef.current.remoteCursor = cursor
+          clientRef.current.localSeq = cursor
+          setConnected(true)
+        })
+        .catch(() => {
+          connectRetries++
+          if (connectRetries < CONNECT_MAX_RETRIES) {
+            connectTimer = setTimeout(tryConnect, CONNECT_RETRY_MS)
+          } else {
+            setConnected(false)
+            setError('连接失败，请刷新页面重试')
+          }
+        })
+    }
+    tryConnect()
     void pollOnce()
-
     return () => {
       stopSubscribe()
       stopPolling()
+      if (connectTimer) clearTimeout(connectTimer)
     }
   }, [realmId, threadId, actorType, actorId, doc])
-
   // Presence：心跳上报 + 轮询远端光标
   useEffect(() => {
     let stopped = false
-
     const reportPresence = async () => {
       const textarea = textareaRef.current
       const offset = textarea?.selectionStart ?? 0
@@ -221,7 +251,6 @@ export default function CurrentEditor({
         // 心跳失败静默重试；断网时远端靠 TTL 自动清理
       }
     }
-
     const pollPresence = async () => {
       try {
         const entries = await getPresence(realmId, docRef, sessionIdRef.current)
@@ -240,7 +269,6 @@ export default function CurrentEditor({
         // 轮询失败忽略，下轮重试
       }
     }
-
     void reportPresence()
     void pollPresence()
     const heartbeat = setInterval(() => {
@@ -249,7 +277,6 @@ export default function CurrentEditor({
     const poller = setInterval(() => {
       void pollPresence()
     }, PRESENCE_POLL_MS)
-
     return () => {
       stopped = true
       clearInterval(heartbeat)
@@ -257,7 +284,6 @@ export default function CurrentEditor({
       void deletePresence(realmId, docRef, sessionIdRef.current)
     }
   }, [realmId, docRef, actorId, actorType, actorName])
-
   // 光标/选区变化 → 立即上报（节流：只在 selection 实际变化时）
   const lastSelectionRef = useRef('')
   const handleSelectionChange = () => {
@@ -277,13 +303,11 @@ export default function CurrentEditor({
       // 上报失败静默
     })
   }
-
   // 同步 Y.Text ↔ textarea
   useEffect(() => {
     const yText = ensureContentText(doc)
     const textarea = textareaRef.current
     if (!textarea) return
-
     const sync = () => {
       const newText = yText.toJSON()
       setTextValue(newText)
@@ -291,26 +315,22 @@ export default function CurrentEditor({
         textarea.value = newText
       }
     }
-
     yText.observe(sync)
     sync()
-
     const onInput = () => {
       const newText = textarea.value
       const currentText = yText.toJSON()
       if (newText !== currentText) {
-        yText.delete(0, currentText.length)
-        yText.insert(0, newText)
+        // P2-21 修复：使用差量同步而非全量替换
+        applyTextDiff(yText, currentText, newText)
       }
     }
     textarea.addEventListener('input', onInput)
-
     return () => {
       yText.unobserve(sync)
       textarea.removeEventListener('input', onInput)
     }
   }, [doc])
-
   // 光标行/列（叠加层与 textarea 行高对齐用）
   const cursorPositions = useMemo(
     () =>
@@ -320,7 +340,6 @@ export default function CurrentEditor({
       })),
     [remoteCursors, textValue],
   )
-
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-3">
@@ -356,7 +375,8 @@ export default function CurrentEditor({
             <div
               className="relative"
               style={{
-                transform: `translateY(${cursor.line * 1.625}rem) translateX(${Math.min(cursor.col * 0.6, 90)}ch * 0.6)`,
+                // P1-6 修复：使用合法 CSS，移除无效的 "ch * 0.6" 写法
+                transform: `translateY(${cursor.line * 1.625}rem) translateX(${Math.min(cursor.col * 0.6, 90)}ch)`,
               }}
             >
               <span

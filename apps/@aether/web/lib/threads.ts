@@ -1,10 +1,9 @@
 // @aether/web · Thread 列表与创建 Server Actions
 'use server'
-
 import { getDb } from '@/lib/db'
 import { threads, projects } from '@aether/db'
 import { desc, eq } from 'drizzle-orm'
-
+import { requireRealmAccess } from '@/lib/auth-guard'
 export interface ThreadRow {
   id: string
   realm_id: string
@@ -14,11 +13,12 @@ export interface ThreadRow {
   manifestation_url?: string
   created_at: Date
 }
-
 /**
  * 列出指定 Realm 下的所有 Thread，按创建时间降序。
  */
 export async function listThreads(realmId: string): Promise<ThreadRow[]> {
+  // P2-18 修复：鉴权守卫
+  await requireRealmAccess(realmId)
   const db = getDb()
   const rows = await db
     .select({
@@ -43,19 +43,19 @@ export async function listThreads(realmId: string): Promise<ThreadRow[]> {
     ...(r.manifestation_url !== null ? { manifestation_url: r.manifestation_url } : {}),
   }))
 }
-
 export interface CreateThreadInput {
   realmId: string
   projectId: string
   title: string
   manifestationUrl?: string
 }
-
 /**
  * 创建新 Thread。
  * code_anchor / manifestation_url 等字段使用空默认值。
  */
 export async function createThread(input: CreateThreadInput): Promise<{ id: string; title: string }> {
+  // P2-18 修复：鉴权守卫
+  await requireRealmAccess(input.realmId)
   const db = getDb()
   const [thread] = await db
     .insert(threads)
@@ -66,17 +66,17 @@ export async function createThread(input: CreateThreadInput): Promise<{ id: stri
       manifestation_url: input.manifestationUrl ?? null,
     })
     .returning({ id: threads.id, title: threads.title })
-
   if (!thread) {
     throw new Error('Failed to create thread')
   }
   return thread
 }
-
 /**
  * 列出指定 Realm 下的 Projects（用于创建 Thread 时选择 project）。
  */
 export async function listProjects(realmId: string): Promise<Array<{ id: string; name: string; slug: string }>> {
+  // P2-18 修复：鉴权守卫
+  await requireRealmAccess(realmId)
   const db = getDb()
   return db
     .select({ id: projects.id, name: projects.name, slug: projects.slug })

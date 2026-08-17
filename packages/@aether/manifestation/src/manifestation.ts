@@ -9,10 +9,8 @@ import { eq, and } from 'drizzle-orm'
 import type { PgDatabase } from 'drizzle-orm/pg-core'
 import { threads } from '@aether/db'
 import type { ThreadRecord } from '@aether/thread-bindings'
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ManifestationDb = PgDatabase<any, any>
-
 export interface ManifestationBinding {
   id: string
   threadId: string
@@ -25,7 +23,6 @@ export interface ManifestationBinding {
   metadata?: Record<string, unknown>
   created_at: string
 }
-
 export interface BindManifestationInput {
   realmId: string
   threadId: string
@@ -34,14 +31,12 @@ export interface BindManifestationInput {
   version?: string
   metadata?: Record<string, unknown>
 }
-
 export interface UpdateManifestationBindingInput {
   url?: string
   kind?: string
   version?: string
   metadata?: Record<string, unknown>
 }
-
 /**
  * 为 Thread 绑定一个 Manifestation URL。
  * 若 Thread 已有绑定，则更新为新值。
@@ -60,7 +55,6 @@ export async function bindManifestation(
     .returning()
   return row ?? null
 }
-
 /**
  * 解除 Thread 的 Manifestation 绑定。
  */
@@ -79,7 +73,6 @@ export async function unbindManifestation(
     .returning()
   return row ?? null
 }
-
 /**
  * 查询 Thread 的 Manifestation URL。
  */
@@ -97,10 +90,10 @@ export async function getManifestation(
     ))
   return row?.url ?? null
 }
-
 /**
- * 列出某 Thread 历史上绑定过的所有 Manifestation（从 audit 日志中回溯）。
- * 注意：当前实现直接读 threads 表，历史追踪需配合 audit_log。
+ * 列出某 Thread 当前绑定的 Manifestation URL。
+ * P3-23 修复：注释与实现对齐——当前实现直接读 threads 表返回当前 URL，
+ * 历史绑定追踪需配合 audit_log 回溯（待 M3.7 完善）。
  */
 export async function listManifestationsByThread(
   db: ManifestationDb,

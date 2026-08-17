@@ -2,9 +2,12 @@
 // App Router / Server Actions / PPR / Edge。构建边界遵循 monorepo-structure.md：
 // SSR/RSC 归 Next，高频模块与 UI 库归 Vite；本应用只承担服务端渲染与状态通道入口。
 import type { NextConfig } from 'next'
-
 const config: NextConfig = {
   reactStrictMode: true,
+  // P2-20 修复：配置 allowedHosts，允许在线预览域名访问 dev server
+  experimental: {
+    allowedHosts: ['.monkeycode-ai.online'],
+  },
   transpilePackages: [
     '@aether/current-sync',
     '@aether/db',
@@ -13,5 +16,4 @@ const config: NextConfig = {
     '@aether/ui',
   ],
 }
-
 export default config
