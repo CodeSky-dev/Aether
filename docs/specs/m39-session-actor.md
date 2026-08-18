@@ -42,6 +42,10 @@ export function resolveSessionActor(auth: AuthInstance, headers: Headers): Promi
 
 `apps/@aether/web/lib/auth-guard.ts` 的 `resolveCurrentActor()` 改为经 `resolveSessionActor` + 请求头解析真实会话，无会话仍返回 `null`（`AETHER_ENTITLEMENT_ENABLED=true` 时继续 fail-closed）。开关默认值保持 `false`，本次不改变默认行为。
 
+#### 认证未配置时的降级行为
+
+当 `BETTER_AUTH_URL` 或 `BETTER_AUTH_SECRET` 任一未配置时，Web 不创建 Better-Auth 实例，`resolveCurrentActor()` 记录一次性告警并返回 `null`。因此 Current 写入在非强制鉴权的开发环境中继续使用 `human/web-client` 作为服务端注入的退化主体；若 `AETHER_ENTITLEMENT_ENABLED=true`，缺少认证主体仍会 fail-closed，不会因为降级而放宽授权。若会话解析本身抛错，也采用相同的 `null` 返回和 fail-closed 行为。
+
 ### 5. 消除客户端 actor 伪造
 
 `appendCurrentUpdate` Server Action 的入参**移除** `actorType` / `actorId`，改为服务端解析：

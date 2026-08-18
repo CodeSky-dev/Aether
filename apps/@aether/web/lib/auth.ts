@@ -38,3 +38,14 @@ export function getAuth(): AuthInstance {
   }
   return authInstance
 }
+
+/**
+ * 尝试获取 Web Better-Auth 实例。
+ * 认证环境变量未配置时返回 null，供非认证开发路径优雅降级。
+ */
+export function tryGetAuth(): AuthInstance | null {
+  if (!process.env.BETTER_AUTH_URL || !process.env.BETTER_AUTH_SECRET) {
+    return null
+  }
+  return getAuth()
+}

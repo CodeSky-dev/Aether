@@ -10,7 +10,7 @@
 import { headers } from 'next/headers'
 import { resolveSessionActor } from '@aether/auth'
 import { getDb } from '@/lib/db'
-import { getAuth } from '@/lib/auth'
+import { tryGetAuth } from '@/lib/auth'
 import { realms } from '@aether/db'
 import { eq } from 'drizzle-orm'
 import {
@@ -27,6 +27,8 @@ function isEntitlementEnabled(): boolean {
   return process.env.AETHER_ENTITLEMENT_ENABLED === 'true'
 }
 let entitlementDisabledNoticeLogged = false
+let authNotConfiguredWarningLogged = false
+let authResolutionFailureWarningLogged = false
 export interface CurrentActor {
   actorType: ActorType
   actorId: string
@@ -35,11 +37,33 @@ export interface CurrentActor {
  * 解析当前请求主体。浏览器会话只解析 human actor。
  */
 export async function resolveCurrentActor(): Promise<CurrentActor | null> {
-  const sessionActor = await resolveSessionActor(getAuth(), await headers())
-  if (sessionActor === null) return null
-  return {
-    actorType: sessionActor.actorType,
-    actorId: sessionActor.actorId,
+  const auth = tryGetAuth()
+  if (auth === null) {
+    if (!authNotConfiguredWarningLogged) {
+      authNotConfiguredWarningLogged = true
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[auth-guard] Better-Auth is not configured; session actor resolution is unavailable',
+      )
+    }
+    return null
+  }
+  try {
+    const sessionActor = await resolveSessionActor(auth, await headers())
+    if (sessionActor === null) return null
+    return {
+      actorType: sessionActor.actorType,
+      actorId: sessionActor.actorId,
+    }
+  } catch {
+    if (!authResolutionFailureWarningLogged) {
+      authResolutionFailureWarningLogged = true
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[auth-guard] Better-Auth session resolution failed; returning null for fail-closed enforcement',
+      )
+    }
+    return null
   }
 }
 /**

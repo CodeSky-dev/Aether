@@ -42,8 +42,8 @@ pnpm test
 | `PORT` | converge-server 监听端口（默认 1234） | 否 |
 | `AETHER_AUTH_GUARD_ENABLED` | 鉴权守卫开关（默认 true） | 否 |
 | `AETHER_ENTITLEMENT_ENABLED` | Entitlement Engine 强制判定开关（默认 false） | 否 |
-| `BETTER_AUTH_URL` | Better-Auth 应用基础 URL | 是（Web 认证） |
-| `BETTER_AUTH_SECRET` | Better-Auth 会话签名密钥 | 是（Web 认证） |
+| `BETTER_AUTH_URL` | Better-Auth 应用基础 URL | 否（未配置时不解析会话主体，Current 写入退化为 `web-client`） |
+| `BETTER_AUTH_SECRET` | Better-Auth 会话签名密钥 | 否（未配置时不解析会话主体，Current 写入退化为 `web-client`） |
 
 ## 项目结构
 
