@@ -40,7 +40,7 @@ export default function AuditRowItem({ row }: AuditRowProps) {
         </span>
         <span className="shrink-0 font-mono text-neutral-8">{label}</span>
         {/* P3-22 修复：展示 actor_id，增强审计可追溯性 */}
-        <span className="shrink-0 font-mono text-copy-10 text-neutral-4" title={row.actor_id}>
+        <span className="shrink-0 font-mono text-label-12 text-neutral-4" title={row.actor_id}>
           {shortHash(row.actor_id)}
         </span>
         <span className="min-w-0 flex-1 truncate text-neutral-5">{target || '—'}</span>
@@ -50,8 +50,8 @@ export default function AuditRowItem({ row }: AuditRowProps) {
       </div>
       {/* P3-22 修复：展示 payload_hash（sha256），用于审计完整性校验 */}
       <div className="flex items-center gap-2 pl-1">
-        <span className="text-copy-10 text-neutral-4">payload_hash:</span>
-        <span className="font-mono text-copy-10 text-neutral-4" title={row.payload_hash}>
+        <span className="text-label-12 text-neutral-4">payload_hash:</span>
+        <span className="font-mono text-label-12 text-neutral-4" title={row.payload_hash}>
           {shortHash(row.payload_hash)}
         </span>
       </div>

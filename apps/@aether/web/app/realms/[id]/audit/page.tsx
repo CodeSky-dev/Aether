@@ -23,7 +23,7 @@ export default async function AuditPage({ params }: PageProps) {
     <NavShell currentRealmName={realm.name} currentRealmId={realm.id}>
       <div className="max-w-3xl px-6 py-8">
         <div className="mb-8">
-          <h1 className="text-copy-18 font-medium text-neutral-9">Audit Vault</h1>
+          <h1 className="text-title-28 font-medium text-neutral-10">Audit Vault</h1>
           <p className="mt-1 text-copy-13 text-neutral-5">
             {realm.name} 的所有操作审计记录（人 + Entity）
           </p>

@@ -16,7 +16,7 @@ export default function ThreadList({ threads, realmId }: ThreadListProps) {
     return (
       <div className="rounded-lg border border-dashed border-border bg-neutral-1 p-6 text-center">
         <p className="text-copy-14 text-neutral-6">此 Realm 暂无 Thread</p>
-        <p className="mt-1 text-copy-12 text-neutral-4">点击右上角「新建 Thread」开始。</p>
+        <p className="mt-1 text-label-12 text-neutral-4">点击右上角「新建 Thread」开始。</p>
       </div>
     )
   }
@@ -41,7 +41,7 @@ export default function ThreadList({ threads, realmId }: ThreadListProps) {
             <button
               type="button"
               onClick={() => setSelectedThreadId(null)}
-              className="text-copy-12 text-neutral-5 transition hover:text-neutral-7"
+              className="text-label-12 text-neutral-5 transition hover:text-neutral-7"
             >
               收起
             </button>

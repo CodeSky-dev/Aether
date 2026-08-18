@@ -26,6 +26,6 @@ AuditRowItem × N
 - [x] 访问 `/realms/[id]/audit` 显示审计记录列表（或空态）
 - [x] NavShell 侧边栏在 `/realms/[id]` 下显示"审计记录"链接
 - [x] 点击"审计记录"跳转到 `/realms/[id]/audit`
-- [ ] 无 TypeScript 类型错误
-- [ ] ESLint 无报错
-- [ ] 现有 test 仍然通过
+- [x] 无 TypeScript 类型错误
+- [x] ESLint 无报错
+- [x] 现有 test 仍然通过

@@ -14,7 +14,7 @@ export default async function RealmsPage() {
       <div className="max-w-2xl px-6 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-copy-18 font-medium text-neutral-9">Realms</h1>
+            <h1 className="text-title-28 font-medium text-neutral-10">Realms</h1>
             <p className="mt-1 text-copy-13 text-neutral-5">
               选择或创建一个新的 Realm 来开始工作。
             </p>
@@ -40,7 +40,7 @@ function EmptyState() {
   return (
     <div className="rounded-lg border border-dashed border-border bg-neutral-1 p-8 text-center">
       <p className="text-copy-14 text-neutral-6">暂无 Realm</p>
-      <p className="mt-1 text-copy-12 text-neutral-4">
+      <p className="mt-1 text-label-12 text-neutral-4">
         点击右上角「新建 Realm」开始创建第一个工作空间。
       </p>
     </div>

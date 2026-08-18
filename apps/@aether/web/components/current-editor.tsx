@@ -344,16 +344,16 @@ export default function CurrentEditor({
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-3">
         <span className={`inline-flex h-2 w-2 rounded-full ${connected ? 'bg-emerald-500' : 'bg-neutral-300'}`} />
-        <span className="text-copy-12 text-neutral-5">{connected ? '已连接（轮询中）' : '连接中…'}</span>
-        {saving && <span className="text-copy-12 text-accent">保存中…</span>}
+        <span className="text-label-12 text-neutral-5">{connected ? '已连接（轮询中）' : '连接中…'}</span>
+        {saving && <span className="text-label-12 text-accent">保存中…</span>}
         {remoteCursors.length > 0 && (
-          <span className="text-copy-12 text-neutral-4">
+          <span className="text-label-12 text-neutral-4">
             {remoteCursors.length} 位实体在线
           </span>
         )}
       </div>
       {error && (
-        <p className="rounded-md bg-red-500/10 px-3 py-2 text-copy-12 text-red-600">{error}</p>
+        <p className="rounded-md bg-red-500/10 px-3 py-2 text-label-12 text-red-600">{error}</p>
       )}
       <div className="relative">
         <textarea
@@ -384,7 +384,7 @@ export default function CurrentEditor({
                 style={{ backgroundColor: cursor.color }}
               />
               <span
-                className="absolute top-4 left-0 whitespace-nowrap rounded px-1 py-0.5 text-copy-10 text-white shadow-sm"
+                className="absolute top-4 left-0 whitespace-nowrap rounded px-1 py-0.5 text-label-12 text-white shadow-sm"
                 style={{ backgroundColor: cursor.color }}
               >
                 {cursor.actorName}
@@ -402,7 +402,7 @@ export default function CurrentEditor({
                 className="inline-block h-2 w-2 rounded-full"
                 style={{ backgroundColor: cursor.color }}
               />
-              <span className="text-copy-11 text-neutral-5">{cursor.actorName}</span>
+              <span className="text-label-12 text-neutral-5">{cursor.actorName}</span>
             </div>
           ))}
         </div>

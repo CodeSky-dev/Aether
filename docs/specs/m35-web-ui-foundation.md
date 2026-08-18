@@ -81,13 +81,13 @@ Broadcast → other clients
 
 ## 验收标准
 
-- [ ] 访问 `/` 显示现有 Landing 页
-- [ ] 点击「进入 Realm」跳转到 `/realms`
-- [ ] `/realms` 列出所有 Realm（空态友好）
-- [ ] 可在 `/realms` 创建新 Realm（调用 `createRealm` action）
-- [ ] 点击 Realm 卡片进入 `/realms/[id]`
-- [ ] `/realms/[id]` 展示 Thread 列表
-- [ ] 创建新 Thread 后可在 Current Editor 中编辑
-- [ ] Editor 变更经 Server Action 落库并广播
-- [ ] 无 TypeScript 类型错误
-- [ ] 现有 channel-service.test.ts 仍然通过
+- [x] 访问 `/` 显示现有 Landing 页
+- [x] 点击「进入 Realm」跳转到 `/realms`
+- [x] `/realms` 列出所有 Realm（空态友好）
+- [x] 可在 `/realms` 创建新 Realm（调用 `createRealm` action）
+- [x] 点击 Realm 卡片进入 `/realms/[id]`
+- [x] `/realms/[id]` 展示 Thread 列表
+- [x] 创建新 Thread 后可在 Current Editor 中编辑
+- [x] Editor 变更经 Server Action 落库并广播
+- [x] 无 TypeScript 类型错误
+- [x] 现有 channel-service.test.ts 仍然通过

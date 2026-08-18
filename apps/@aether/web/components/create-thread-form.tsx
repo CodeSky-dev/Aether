@@ -90,7 +90,7 @@ export default function CreateThreadForm({ realmId }: CreateThreadFormProps) {
         value={manifestationUrl}
         onChange={(e) => setManifestationUrl(e.target.value)}
         placeholder="Manifestation URL（可选）"
-        className="rounded-md border border-border bg-neutral-1 px-3 py-1.5 text-copy-12 text-neutral-7 outline-none placeholder-neutral-4 focus:border-accent/50"
+        className="rounded-md border border-border bg-neutral-1 px-3 py-1.5 text-label-12 text-neutral-7 outline-none placeholder-neutral-4 focus:border-accent/50"
       />
       <button
         type="submit"
@@ -99,7 +99,7 @@ export default function CreateThreadForm({ realmId }: CreateThreadFormProps) {
       >
         {submitting ? '创建中…' : '新建 Thread'}
       </button>
-      {error && <p className="text-copy-11 text-red-600">{error}</p>}
+      {error && <p className="text-label-12 text-red-600">{error}</p>}
     </form>
   )
 }

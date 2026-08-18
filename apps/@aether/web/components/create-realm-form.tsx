@@ -51,9 +51,9 @@ export default function CreateRealmForm() {
       >
         {submitting ? '创建中…' : '新建 Realm'}
       </button>
-      {error && <p className="text-copy-11 text-red-600">{error}</p>}
+      {error && <p className="text-label-12 text-red-600">{error}</p>}
       {created && (
-        <p className="text-copy-11 text-emerald-600">创建成功！</p>
+        <p className="text-label-12 text-emerald-600">创建成功！</p>
       )}
     </form>
   )

@@ -68,7 +68,7 @@ export default function AuditLogList({ realmId, initialLogs }: AuditLogListProps
         <select
           value={actorType}
           onChange={(e) => setActorType(e.target.value as ActorType | '')}
-          className="rounded-md border border-border bg-neutral-1 px-3 py-1.5 text-copy-12 text-neutral-7 outline-none focus:border-accent/50"
+          className="rounded-md border border-border bg-neutral-1 px-3 py-1.5 text-label-12 text-neutral-7 outline-none focus:border-accent/50"
         >
           {ACTOR_TYPE_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -77,13 +77,13 @@ export default function AuditLogList({ realmId, initialLogs }: AuditLogListProps
         <select
           value={action}
           onChange={(e) => setAction(e.target.value as AuditAction | '')}
-          className="rounded-md border border-border bg-neutral-1 px-3 py-1.5 text-copy-12 text-neutral-7 outline-none focus:border-accent/50"
+          className="rounded-md border border-border bg-neutral-1 px-3 py-1.5 text-label-12 text-neutral-7 outline-none focus:border-accent/50"
         >
           {ACTION_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
-        <span className="text-copy-11 text-neutral-4">
+        <span className="text-label-12 text-neutral-4">
           共 {logs.length} 条{hasMore ? '+' : ''}
         </span>
       </div>
@@ -91,7 +91,7 @@ export default function AuditLogList({ realmId, initialLogs }: AuditLogListProps
       {logs.length === 0 && !loading ? (
         <div className="rounded-lg border border-dashed border-border bg-neutral-1 p-6 text-center">
           <p className="text-copy-14 text-neutral-6">暂无审计记录</p>
-          <p className="mt-1 text-copy-12 text-neutral-4">操作写入后将在此显示。</p>
+          <p className="mt-1 text-label-12 text-neutral-4">操作写入后将在此显示。</p>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -106,7 +106,7 @@ export default function AuditLogList({ realmId, initialLogs }: AuditLogListProps
           type="button"
           onClick={handleLoadMore}
           disabled={loading}
-          className="self-center rounded-md border border-border bg-neutral-1 px-4 py-1.5 text-copy-12 text-neutral-6 transition hover:border-neutral-3 hover:text-neutral-8 disabled:opacity-50"
+          className="self-center rounded-md border border-border bg-neutral-1 px-4 py-1.5 text-label-12 text-neutral-6 transition hover:border-neutral-3 hover:text-neutral-8 disabled:opacity-50"
         >
           {loading ? '加载中…' : '加载更多'}
         </button>

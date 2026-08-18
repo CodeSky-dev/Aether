@@ -15,7 +15,7 @@ aether/
 ├── apps/
 │   ├── @aether/web/                  # Next.js 16 主应用（App Router / Server Actions / PPR / Edge）
 │   ├── @aether/editor-host/          # 编辑器宿主：Current 渲染层、Drift 持久化入口
-│   └── @aether/docs/                 # 站点、公开 API 文档、术语表
+│   └── @aether/converge-server/      # Hocuspocus 收敛服务：CRDT 增量持久化 + Redis 广播
 │
 └── packages/
     ├── @aether/db/                   # Drizzle schema + Drizzle Kit 迁移，Realm 隔离封装
@@ -43,8 +43,8 @@ aether/
 | `@aether/thread-bindings` | Thread 锚点绑定、对话内嵌、重水合路径、绑定内核 | `@aether/db`、`@aether/types` | tsc |
 | `@aether/manifestation` | Vercel Preview 集成、Inline Annotation、Spot Diff、画廊 | `@aether/current-sync`、`@aether/types` | tsc |
 | `@aether/resonance` | 公开 API 路由定义、Webhook 投递、OAuth 注册、SDK 导出 | `@aether/auth`、`@aether/db`、`@aether/types` | tsc + Vite 8 库模式 |
-| `@aether/ui` | 组件库、设计令牌、术语命名规范 | `@aether/types` | Vite 8 库模式 |
-| `@aether/state` | Zustand store、Yjs 双向绑定、乐观更新 | `@aether/current-sync`、`@aether/types` | Vite 8 库模式 |
+| `@aether/ui` | 设计令牌契约（tokens.css/tokens.ts + verify），仅 tokens，无运行时产物 | 无 | 纯配置（check 校验） |
+| `@aether/state` | Zustand store、Yjs 双向绑定、乐观更新 | `@aether/current-sync`、`@aether/types` | tsc |
 | `@aether/types` | 共享类型、Yjs schema 类型生成与校验 | 无 | tsc |
 | `@aether/config` | TS7 / ESLint / Tailwind 共享配置 | 无（对外运行时零依赖；内部自带 eslint/tailwind 工具依赖） | 纯配置 |
 | `@aether/observability` | 日志、遥测、遥测采集 SDK | `@aether/types` | tsc |
@@ -68,7 +68,7 @@ aether/
 | 归属 | 内容 | 构建系统 |
 |---|---|---|
 | Next 16 | SSR/RSC 页面、Server Actions、Edge Functions、PPR 路由 | Turborepo → Next |
-| Vite 8 | `@aether/ui` 库模式、`@aether/resonance` SDK、`@aether/editor-host` 高频交互模块 | Vite 8 |
+| Vite 8 | `@aether/resonance` SDK、`@aether/editor-host` 高频交互模块 | Vite 8 |
 | 中间层 | 纯逻辑包（db/auth/types/current-sync 等） | tsc，双端复用 |
 
 边界纪律：SSR/RSC 页面归 Next，高频模块与 UI 库归 Vite；Turborepo 负责构建产物编排；禁止同包内混用两套 dev server。
@@ -78,4 +78,4 @@ aether/
 - `turbo.json` 声明 `build`、`lint`、`test`、`typecheck` 任务，`dependsOn` 显式声明包间依赖。
 - remote cache 对接 Vercel Remote Caching，CI 与本地共享缓存。
 - Tailwind 版本与 `@aether/config` 版本哈希纳入 cache key，规避 Rust 引擎脏缓存（详见 [risks.md](./risks.md) 风险 3）。
-- `@aether/ui` 与 `@aether/state` 的构建产物列入 `outputs` 白名单。
+- `@aether/state` 的 tsc 构建产物（dist）与各应用的 `.next`/`dist`/`out` 均列入 `outputs` 白名单。
