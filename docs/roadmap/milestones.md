@@ -103,7 +103,7 @@ graph LR
 
 **任务清单**：
 
-- [ ] Entitlement Engine：角色 / 作用域 / 资源三级判定
+- [x] Entitlement Engine：角色 / 作用域 / 资源三级判定
 - [ ] Audit Vault：审计中心与导出
 - [ ] SSO / SCIM 接入
 - [ ] Realm Isolation 生产级验证
