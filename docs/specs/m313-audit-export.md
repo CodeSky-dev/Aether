@@ -23,7 +23,7 @@ GET /api/realms/:realmId/audit/export
 | 状态 | 条件 |
 |---|---|
 | `401` | 无会话主体（`resolveCurrentActor()` 返回 null） |
-| `400` | 查询参数非法（`AuditExportQueryError`） |
+| `400` | 查询参数非法（`AuditExportQueryError`）或 `realmId` 不是 UUID |
 | `403` | entitlement 判定拒绝，或 Realm 级 membership 角色不足 |
 | `404` | Realm 不存在 |
 | `200` | 流式附件响应 |
@@ -40,7 +40,7 @@ await requireRealmRole(realmId, actor, READ_MEMBER_ROLES) // owner | admin | mem
 
 ## 流式与分页
 
-响应体是 `ReadableStream`，边查边写，不把台账整体载入内存。分页用 `(created_at, id)` 升序键集游标：
+响应体是 `ReadableStream`，通过 `pull()` 一次只推进一个输出块，并在客户端取消时关闭异步游标；边查边写，不把台账整体载入内存。分页用 `(created_at, id)` 升序键集游标：
 
 ```sql
 created_at > :cursor_created_at

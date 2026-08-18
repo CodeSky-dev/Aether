@@ -21,6 +21,9 @@ import { READ_MEMBER_ROLES, requireRealmRole } from '@/lib/membership-guard'
 
 export const dynamic = 'force-dynamic'
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 interface RouteParams {
   params: Promise<{ realmId: string }>
 }
@@ -49,13 +52,10 @@ export async function GET(
     throw error
   }
 
-  try {
-    await requireEntitlement(realmId, { resource: 'audit', action: 'read' })
-    await requireRealmRole(realmId, actor, READ_MEMBER_ROLES)
-  } catch (error) {
+  if (!UUID_REGEX.test(realmId)) {
     return Response.json(
-      { error: error instanceof Error ? error.message : 'Audit export denied' },
-      { status: 403 },
+      { error: 'Invalid realmId: must be a valid UUID' },
+      { status: 400 },
     )
   }
 
@@ -67,6 +67,16 @@ export async function GET(
     .limit(1)
   if (!realm) {
     return Response.json({ error: 'Realm not found' }, { status: 404 })
+  }
+
+  try {
+    await requireEntitlement(realmId, { resource: 'audit', action: 'read' })
+    await requireRealmRole(realmId, actor, READ_MEMBER_ROLES)
+  } catch (_error) {
+    return Response.json(
+      { error: 'Audit export denied' },
+      { status: 403 },
+    )
   }
 
   await recordAuditExport(db, {
@@ -85,19 +95,31 @@ export async function GET(
 
   const encoder = new TextEncoder()
   const serialize = query.format === 'csv' ? auditCsvLine : auditJsonlLine
+  const iterator = iterateAuditExportRows(realmId, query)
+  let headerPending = query.format === 'csv'
+  let cancelled = false
   const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
+    async pull(controller) {
+      if (cancelled) return
       try {
-        if (query.format === 'csv') {
+        if (headerPending) {
+          headerPending = false
           controller.enqueue(encoder.encode(auditCsvHeader()))
+          return
         }
-        for await (const row of iterateAuditExportRows(realmId, query)) {
-          controller.enqueue(encoder.encode(serialize(row)))
+        const next = await iterator.next()
+        if (next.done) {
+          controller.close()
+          return
         }
-        controller.close()
+        controller.enqueue(encoder.encode(serialize(next.value)))
       } catch (error) {
         controller.error(error)
       }
+    },
+    async cancel() {
+      cancelled = true
+      await iterator.return?.(undefined)
     },
   })
 
