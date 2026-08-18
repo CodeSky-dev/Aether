@@ -11,6 +11,7 @@ import NavShell from '@/components/nav-shell'
 import PageHeader from '@/components/page-header'
 import { listRealms } from '@/lib/realms'
 import { UNBOUND_REALM_ORGANIZATION_MESSAGE } from '@/lib/membership-utils'
+import { MEMBERSHIP_DENIED_MESSAGE_PREFIX } from '@/lib/membership-guard'
 import { notFound } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
@@ -19,16 +20,17 @@ interface PageProps {
   params: Promise<{ id: string }>
 }
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : '读取成员管理数据失败'
-}
-
-function renderLoadError(error: unknown) {
-  const message = errorMessage(error)
+// 只放行本仓库自己产出、且对当前访问者可公开的文案；驱动/配置错误一律收敛成通用提示，
+// 避免把内部配置与数据库细节透给无权访问该 Realm 的访问者。
+function renderLoadError(error: unknown): string {
+  const message = error instanceof Error ? error.message : ''
   if (message === UNBOUND_REALM_ORGANIZATION_MESSAGE) {
     return 'Realm 尚未绑定真实 organization，请先运行回填脚本 backfill:realm-orgs。'
   }
-  return message
+  if (message.startsWith(MEMBERSHIP_DENIED_MESSAGE_PREFIX)) {
+    return '当前账号没有查看该 Realm 成员的权限。'
+  }
+  return '读取失败，请稍后重试或联系 Realm 管理员。'
 }
 
 export default async function MembersPage({ params }: PageProps) {
@@ -81,6 +83,7 @@ export default async function MembersPage({ params }: PageProps) {
             <RealmInvitationList
               realmId={realmId}
               invitations={invitations}
+              currentActorRole={memberData?.currentActorRole ?? ''}
             />
           </div>
         )}
