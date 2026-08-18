@@ -66,14 +66,10 @@ type EntitlementDenyReason =
   | 'resource_denied'    // entitlements 显式否决
   | 'entity_not_granted' // Entity 写动作缺少显式授权
 
-interface EntitlementDecision {
-  allowed: boolean
-  /** 命中的判定层，便于审计与排障 */
-  layer: 'role' | 'scope' | 'resource'
-  reason: 'granted' | EntitlementDenyReason
-  /** 命中的成员记录作用域（allowed 时给出） */
-  matchedProjectId?: string | null
-}
+// 判别联合：allowed 决定 reason / matchedProjectId 的形态
+type EntitlementDecision =
+  | { allowed: true; layer: 'role' | 'resource'; reason: 'granted'; matchedProjectId?: string | null }
+  | { allowed: false; layer: 'role' | 'scope' | 'resource'; reason: EntitlementDenyReason }
 
 function evaluateEntitlement(subject: EntitlementSubject, request: EntitlementRequest): EntitlementDecision
 function assertEntitlement(subject: EntitlementSubject, request: EntitlementRequest): void  // 拒绝时 throw EntitlementDeniedError
