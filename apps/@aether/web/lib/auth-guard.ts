@@ -7,7 +7,10 @@
 // 环境变量 AETHER_AUTH_GUARD_ENABLED 控制是否启用（默认 true）。
 // 开发调试时可设为 false 关闭守卫。
 'use server'
+import { headers } from 'next/headers'
+import { resolveSessionActor } from '@aether/auth'
 import { getDb } from '@/lib/db'
+import { tryGetAuth } from '@/lib/auth'
 import { realms } from '@aether/db'
 import { eq } from 'drizzle-orm'
 import {
@@ -24,17 +27,44 @@ function isEntitlementEnabled(): boolean {
   return process.env.AETHER_ENTITLEMENT_ENABLED === 'true'
 }
 let entitlementDisabledNoticeLogged = false
+let authNotConfiguredWarningLogged = false
+let authResolutionFailureWarningLogged = false
 export interface CurrentActor {
   actorType: ActorType
   actorId: string
 }
 /**
- * 解析当前请求主体。
- * M3.8 阶段暂不接入 Better-Auth session，待 SSO/SCIM 落地后实现。
+ * 解析当前请求主体。浏览器会话只解析 human actor。
  */
-// eslint-disable-next-line @typescript-eslint/require-await
 export async function resolveCurrentActor(): Promise<CurrentActor | null> {
-  return null
+  const auth = tryGetAuth()
+  if (auth === null) {
+    if (!authNotConfiguredWarningLogged) {
+      authNotConfiguredWarningLogged = true
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[auth-guard] Better-Auth is not configured; session actor resolution is unavailable',
+      )
+    }
+    return null
+  }
+  try {
+    const sessionActor = await resolveSessionActor(auth, await headers())
+    if (sessionActor === null) return null
+    return {
+      actorType: sessionActor.actorType,
+      actorId: sessionActor.actorId,
+    }
+  } catch {
+    if (!authResolutionFailureWarningLogged) {
+      authResolutionFailureWarningLogged = true
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[auth-guard] Better-Auth session resolution failed; returning null for fail-closed enforcement',
+      )
+    }
+    return null
+  }
 }
 /**
  * 校验 realmId 格式并确认 Realm 存在。

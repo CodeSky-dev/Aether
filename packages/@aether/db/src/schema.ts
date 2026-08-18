@@ -113,7 +113,8 @@ export const members = pgTable(
       .references(() => realms.id),
     project_id: uuid('project_id').references(() => projects.id),
     actor_type: actorTypeEnum('actor_type').notNull(),
-    actor_id: uuid('actor_id').notNull(),
+    // actor_id 支持 Entity UUID 或 Better-Auth auth identity。
+    actor_id: text('actor_id').notNull(),
     role: text('role').notNull(),
     entitlements: jsonb('entitlements').notNull().default({}),
     status: memberStatusEnum('status').notNull().default('active'),

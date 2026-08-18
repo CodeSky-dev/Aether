@@ -23,6 +23,7 @@ Aether 是协同智能的介质：承载人、Entity、代码与上下文共存�
 | [specs/m37-manifestation-binding.md](./specs/m37-manifestation-binding.md) | M3.7 Manifestation Binding 规范 | 15 |
 | [specs/m38-entitlement-engine.md](./specs/m38-entitlement-engine.md) | M3.8 Entitlement Engine 规范 | 16 |
 | [specs/m38-plan.md](./specs/m38-plan.md) | M3.8 Entitlement Engine 实施计划 | 17 |
+| [specs/m39-session-actor.md](./specs/m39-session-actor.md) | M3.9 会话主体解析规范 | 18 |
 
 ## 阅读顺序
 

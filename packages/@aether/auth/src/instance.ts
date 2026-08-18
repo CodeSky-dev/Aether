@@ -3,6 +3,7 @@
 // 下游禁止直接依赖 better-auth，一律经本包创建实例。
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { toNextJsHandler } from 'better-auth/next-js'
 import { organization } from 'better-auth/plugins'
 import { realmAccessControl, realmRoles } from './permissions.js'
 export interface CreateAuthOptions {
@@ -43,3 +44,8 @@ export function createAuth(options: CreateAuthOptions) {
   })
 }
 export type AuthInstance = ReturnType<typeof createAuth>
+
+/** 为 Web Route Handler 暴露 Better-Auth 的 Next.js 适配器。 */
+export function createNextAuthHandler(auth: AuthInstance) {
+  return toNextJsHandler(auth)
+}
