@@ -74,6 +74,9 @@ Web 认证入口位于 `apps/@aether/web/lib/auth.ts`，Better-Auth 路由位于
 `apps/@aether/web/app/api/auth/[...all]/route.ts`；认证主体解析统一经
 `@aether/auth` 完成。
 
+Realm membership 邀请与 JIT 镜像位于 `apps/@aether/web/app/actions/membership.ts`，
+Better-Auth organization 操作统一经 `@aether/auth` 封装。
+
 ## 核心概念
 
 | 术语 | 说明 |
