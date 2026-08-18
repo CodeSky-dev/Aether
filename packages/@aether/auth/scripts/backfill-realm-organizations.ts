@@ -113,6 +113,7 @@ export async function runBackfill(
   args: BackfillArgs,
 ): Promise<BackfillSummary> {
   const summary = emptySummary()
+  const realmSlugs = new Set(realmsToProcess.map((realm) => realm.slug))
 
   for (const realm of realmsToProcess) {
     if (!isPlaceholderOrganization(realm.authOrgId)) {
@@ -158,6 +159,14 @@ export async function runBackfill(
         `${realm.slug}: ${safeErrorMessage(error)}`,
       )
     }
+  }
+
+  for (const overrideSlug of args.realmOwners.keys()) {
+    if (realmSlugs.has(overrideSlug)) continue
+    summary.failed += 1
+    summary.failureReasons.push(
+      `${overrideSlug}: --realm override did not match any Realm`,
+    )
   }
 
   return summary
@@ -299,6 +308,7 @@ export async function main(
     const realmsToProcess = await dependencies.listRealms()
     const summary = await runBackfill(realmsToProcess, dependencies, args)
     printSummary(summary, args.apply)
+    if (summary.failed > 0) process.exitCode = 1
   } finally {
     await client.end({ timeout: 5 })
   }

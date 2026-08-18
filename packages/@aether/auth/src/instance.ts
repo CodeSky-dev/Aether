@@ -24,7 +24,7 @@ export function createAuth(options: CreateAuthOptions) {
     baseURL,
     secret,
     trustedOrigins,
-    mailer = resolveMailer(),
+    mailer,
     options: extra,
   } = options
   return betterAuth({
@@ -42,7 +42,8 @@ export function createAuth(options: CreateAuthOptions) {
         allowUserToCreateOrganization: false,
         creatorRole: 'owner',
         sendInvitationEmail: async (data) => {
-          await mailer.sendInvitation({
+          const invitationMailer = mailer ?? resolveMailer()
+          await invitationMailer.sendInvitation({
             to: data.email,
             realmName: data.organization.name,
             role: data.role,

@@ -107,4 +107,22 @@ describe('backfill realm organization logic', () => {
       ownerUserId: 'user-2',
     })
   })
+
+  it('counts realm overrides that match no Realm as failures', async () => {
+    const dependencies: BackfillDependencies = {
+      findUserIdByEmail: vi.fn(),
+      createOrganization: vi.fn(),
+      applyRealm: vi.fn(),
+    }
+
+    const summary = await runBackfill(realms, dependencies, {
+      apply: false,
+      realmOwners: new Map([['typo-alpha', 'owner@example.com']]),
+    })
+
+    expect(summary.failed).toBe(1)
+    expect(summary.failureReasons).toContain(
+      'typo-alpha: --realm override did not match any Realm',
+    )
+  })
 })
