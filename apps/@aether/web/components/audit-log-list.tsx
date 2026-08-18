@@ -37,6 +37,7 @@ export default function AuditLogList({ realmId, initialLogs }: AuditLogListProps
         const result = await listAuditLogs({
           realmId,
           limit: opts.limit,
+          ...(opts.offset > 0 ? { offset: opts.offset } : {}),
           ...(opts.actorType ? { actorType: opts.actorType } : {}),
           ...(opts.action ? { action: opts.action } : {}),
         })

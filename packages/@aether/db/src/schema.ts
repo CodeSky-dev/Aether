@@ -228,7 +228,9 @@ export const crdtUpdates = pgTable(
     seq: bigserial('seq', { mode: 'number' }).notNull(),
     payload: bytea('payload').notNull(),
     actor_type: actorTypeEnum('actor_type').notNull(),
-    actor_id: uuid('actor_id').notNull(),
+    // actor_id 支持 Entity UUID、auth identity 或系统客户端名（web-client / hocuspocus-server），
+    // 不能约束为 uuid 类型，否则非 UUID 占位 actor 落库时报错。
+    actor_id: text('actor_id').notNull(),
     idempotency_key: text('idempotency_key').notNull(),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
@@ -249,7 +251,8 @@ export const auditLog = pgTable(
       .notNull()
       .references(() => realms.id),
     actor_type: actorTypeEnum('actor_type').notNull(),
-    actor_id: uuid('actor_id').notNull(),
+    // actor_id 支持 Entity UUID 或 auth identity；constraint 同 crdt_updates（text）
+    actor_id: text('actor_id').notNull(),
     action: auditActionEnum('action').notNull(),
     target: jsonb('target').notNull().default({}),
     payload_hash: text('payload_hash').notNull(),
@@ -284,7 +287,8 @@ export const dialogueMessages = pgTable(
     // 对话内单调递增序号，保证消息顺序
     seq: bigserial('seq', { mode: 'number' }).notNull(),
     actor_type: actorTypeEnum('actor_type').notNull(),
-    actor_id: uuid('actor_id').notNull(),
+    // actor_id 支持 Entity UUID 或 auth identity；constraint 同 crdt_updates（text）
+    actor_id: text('actor_id').notNull(),
     role: dialogueRoleEnum('role').notNull(),
     content: text('content').notNull(),
     // 扩展元数据：工具调用、引用、附件引用等

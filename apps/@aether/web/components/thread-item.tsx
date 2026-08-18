@@ -10,8 +10,8 @@ interface ThreadItemProps {
 }
 const STATUS_CONFIG = {
   open: { label: '开放', color: 'bg-accent/20 text-accent' },
-  in_review: { label: '评审中', color: 'text-warning' },
-  resolved: { label: '已解决', color: 'text-success' },
+  in_review: { label: '评审中', color: 'bg-warning/20 text-warning' },
+  resolved: { label: '已解决', color: 'bg-success/20 text-success' },
   archived: { label: '已归档', color: 'bg-neutral-3 text-neutral-5' },
 } as const
 type StatusKey = keyof typeof STATUS_CONFIG

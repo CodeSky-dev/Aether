@@ -136,7 +136,10 @@ export default function CurrentEditor({
   useEffect(() => {
     ensureContentText(doc)
     // 监听本地 update → 落库
-    const stopSubscribe = subscribeDocUpdates(doc, (update) => {
+    // P2-24 修复：过滤远端 origin，避免把轮询收到的远端 update 再写回服务端，
+    // 形成回声放大（每次轮询都会重新落库一条重复增量）。
+    const stopSubscribe = subscribeDocUpdates(doc, (update, origin) => {
+      if (origin === REMOTE_ORIGIN) return
       const serialized = serializeUpdate(update)
       setSaving(true)
       appendCurrentUpdate({

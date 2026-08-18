@@ -21,6 +21,8 @@ export interface ListAuditLogsInput {
   realmId: string
   /** 默认按 created_at 降序，最多返回 100 条 */
   limit?: number
+  /** 偏移量，用于"加载更多"分页（P1-7 修复：客户端按 offset 翻页） */
+  offset?: number
   actorType?: ActorType
   action?: AuditAction
 }
@@ -29,6 +31,7 @@ export async function listAuditLogs(input: ListAuditLogsInput): Promise<AuditRow
   await requireRealmAccess(input.realmId)
   const db = getDb()
   const limit = input.limit ?? 100
+  const offset = input.offset ?? 0
   const conditions = [eq(auditLog.realm_id, input.realmId)]
   if (input.actorType) conditions.push(eq(auditLog.actor_type, input.actorType))
   if (input.action) conditions.push(eq(auditLog.action, input.action))
@@ -38,6 +41,7 @@ export async function listAuditLogs(input: ListAuditLogsInput): Promise<AuditRow
     .where(and(...conditions))
     .orderBy(desc(auditLog.created_at))
     .limit(limit)
+    .offset(offset)
   return rows
     .map((r) => {
       const target = r.target as Record<string, unknown>
