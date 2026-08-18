@@ -25,7 +25,8 @@ GET /api/realms/:realmId/audit/export
 | `401` | 无会话主体（`resolveCurrentActor()` 返回 null） |
 | `400` | 查询参数非法（`AuditExportQueryError`）或 `realmId` 不是 UUID |
 | `403` | entitlement 判定拒绝，或 Realm 级 membership 角色不足 |
-| `404` | Realm 不存在 |
+| `404` | 通过授权后 Realm 不存在（例如并发删除或关闭基础守卫） |
+| `503` | 授权依赖（数据库 / 配置）暂时不可用 |
 | `200` | 流式附件响应 |
 
 ## 授权
@@ -37,6 +38,8 @@ await requireRealmRole(realmId, actor, READ_MEMBER_ROLES) // owner | admin | mem
 ```
 
 `requireEntitlement` 在 `AETHER_ENTITLEMENT_ENABLED !== 'true'` 时直接放行，所以导出**必须**再过 `requireRealmRole`——否则开关关闭状态下任一已登录用户可导出任意 Realm 的全量审计台账。
+
+授权前不会查询 Realm 是否存在：不存在 Realm 与无权访问 Realm 的请求统一按 403 处理，避免已登录的非成员枚举租户。授权依赖发生数据库或配置故障时返回 503，服务端记录诊断日志但不向客户端泄露内部错误。
 
 ## 流式与分页
 
