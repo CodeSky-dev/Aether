@@ -28,7 +28,8 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "backfill:realm-orgs": "tsx scripts/backfill-realm-organizations.ts"
   },
   "dependencies": {
     "@aether/db": "workspace:*",
@@ -40,6 +41,8 @@
     "@aether/config": "workspace:*",
     "@types/node": "^26.2.0",
     "eslint": "^9.39.5",
+    "postgres": "^3.4.5",
+    "tsx": "^4.20.5",
     "typescript": "^6.0.0",
     "vitest": "^3.2.4"
   }

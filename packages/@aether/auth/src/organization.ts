@@ -9,6 +9,10 @@ import type { realmRoles } from './permissions.js'
 
 export type RealmOrganizationRole = keyof typeof realmRoles
 
+export function isPlaceholderOrganization(organizationId: string): boolean {
+  return organizationId.startsWith('org-placeholder-')
+}
+
 export interface CreateRealmOrganizationInput {
   name: string
   slug: string

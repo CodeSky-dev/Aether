@@ -57,6 +57,16 @@ function requireAuth() {
   return auth
 }
 
+async function requireAuthenticatedActor() {
+  const actor = await resolveCurrentActor()
+  if (actor === null) {
+    throw new Error(
+      'Cannot manage Realm membership without an authenticated session',
+    )
+  }
+  return actor
+}
+
 export interface InviteRealmMemberInput {
   realmId: string
   email: string
@@ -66,6 +76,7 @@ export interface InviteRealmMemberInput {
 export async function inviteRealmMember(
   input: InviteRealmMemberInput,
 ) {
+  await requireAuthenticatedActor()
   await requireEntitlement(input.realmId, {
     resource: 'realm',
     action: 'manage_member',
@@ -88,6 +99,7 @@ export interface ListRealmInvitationsInput {
 export async function listRealmInvitations(
   input: ListRealmInvitationsInput,
 ) {
+  await requireAuthenticatedActor()
   await requireEntitlement(input.realmId, {
     resource: 'realm',
     action: 'read',

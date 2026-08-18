@@ -101,6 +101,34 @@ describe('membership actions', () => {
     })
   })
 
+  it('rejects invitations without a session before authorization or Realm lookup', async () => {
+    mockedResolveCurrentActor.mockResolvedValue(null)
+
+    await expect(
+      inviteRealmMember({
+        realmId: 'realm-1',
+        email: 'member@example.com',
+        role: 'member',
+      }),
+    ).rejects.toThrow('without an authenticated session')
+
+    expect(mockedRequireEntitlement).not.toHaveBeenCalled()
+    expect(mockedGetDb).not.toHaveBeenCalled()
+    expect(mockedTryGetAuth).not.toHaveBeenCalled()
+  })
+
+  it('rejects invitation listing without a session before authorization or Realm lookup', async () => {
+    mockedResolveCurrentActor.mockResolvedValue(null)
+
+    await expect(
+      listRealmInvitations({ realmId: 'realm-1' }),
+    ).rejects.toThrow('without an authenticated session')
+
+    expect(mockedRequireEntitlement).not.toHaveBeenCalled()
+    expect(mockedGetDb).not.toHaveBeenCalled()
+    expect(mockedTryGetAuth).not.toHaveBeenCalled()
+  })
+
   it('checks manage_member before inviting', async () => {
     mockRealm('org-1')
 

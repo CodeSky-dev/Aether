@@ -25,6 +25,7 @@ Aether 是协同智能的介质：承载人、Entity、代码与上下文共存�
 | [specs/m38-plan.md](./specs/m38-plan.md) | M3.8 Entitlement Engine 实施计划 | 17 |
 | [specs/m39-session-actor.md](./specs/m39-session-actor.md) | M3.9 会话主体解析规范 | 18 |
 | [specs/m310-membership-provisioning.md](./specs/m310-membership-provisioning.md) | M3.10 Membership 开通规范 | 19 |
+| [specs/m311-invitation-mail-backfill.md](./specs/m311-invitation-mail-backfill.md) | M3.11 邀请邮件与 Realm organization 回填规范 | 20 |
 
 ## 阅读顺序
 
