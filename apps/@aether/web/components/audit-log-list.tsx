@@ -1,5 +1,6 @@
 // @aether/web · 审计记录列表（客户端组件：过滤 + 分页加载）
 // P1-7 修复：支持 actorType / action 过滤与"加载更多"分页
+// Yohaku：过滤控件用 .field，记录以 hairline 台账形式呈现（audit-row）。
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import { listAuditLogs, type AuditRow } from '@/lib/audit'
@@ -63,13 +64,13 @@ export default function AuditLogList({ realmId, initialLogs }: AuditLogListProps
     void fetchLogs({ actorType, action, limit: PAGE_SIZE, offset, append: true })
   }
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       {/* 过滤控件 */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <select
           value={actorType}
           onChange={(e) => setActorType(e.target.value as ActorType | '')}
-          className="rounded-md border border-border bg-neutral-1 px-3 py-1.5 text-label-12 text-neutral-7 outline-none focus:border-accent/50"
+          className="field w-auto py-1.5 text-copy-13"
         >
           {ACTOR_TYPE_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -78,24 +79,24 @@ export default function AuditLogList({ realmId, initialLogs }: AuditLogListProps
         <select
           value={action}
           onChange={(e) => setAction(e.target.value as AuditAction | '')}
-          className="rounded-md border border-border bg-neutral-1 px-3 py-1.5 text-label-12 text-neutral-7 outline-none focus:border-accent/50"
+          className="field w-auto py-1.5 text-copy-13"
         >
           {ACTION_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
-        <span className="text-label-12 text-neutral-4">
+        <span className="ml-1 text-label-12 text-neutral-6">
           共 {logs.length} 条{hasMore ? '+' : ''}
         </span>
       </div>
-      {/* 列表 */}
+      {/* 列表：hairline 台账 */}
       {logs.length === 0 && !loading ? (
-        <div className="rounded-lg border border-dashed border-border bg-neutral-1 p-6 text-center">
-          <p className="text-copy-14 text-neutral-6">暂无审计记录</p>
-          <p className="mt-1 text-label-12 text-neutral-4">操作写入后将在此显示。</p>
+        <div className="rounded-lg border border-dashed border-border bg-neutral-1 px-6 py-16 text-center">
+          <p className="text-copy-14 text-neutral-7">暂无审计记录</p>
+          <p className="mt-2 text-label-12 text-neutral-6">操作写入后将在此显示。</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="border-t border-border">
           {logs.map((log) => (
             <AuditRowItem key={log.id} row={log} />
           ))}
@@ -107,7 +108,7 @@ export default function AuditLogList({ realmId, initialLogs }: AuditLogListProps
           type="button"
           onClick={handleLoadMore}
           disabled={loading}
-          className="self-center rounded-md border border-border bg-neutral-1 px-4 py-1.5 text-label-12 text-neutral-6 transition hover:border-neutral-3 hover:text-neutral-8 disabled:opacity-50"
+          className="btn-ghost mx-auto px-5 py-1.5 text-label-12"
         >
           {loading ? '加载中…' : '加载更多'}
         </button>

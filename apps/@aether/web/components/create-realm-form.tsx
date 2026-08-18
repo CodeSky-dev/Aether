@@ -1,4 +1,5 @@
 // @aether/web · 新建 Realm 表单（Client Component）
+// Yohaku：单行紧凑布局，.field 统一控件形态，语义色只表达状态。
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -29,31 +30,27 @@ export default function CreateRealmForm() {
     }
   }
   return (
-    <form onSubmit={(e) => { void handleSubmit(e) }} className="flex w-72 flex-col gap-2">
+    <form onSubmit={(e) => { void handleSubmit(e) }} className="mt-3 flex flex-wrap items-start gap-2">
       <input
         value={slug}
         onChange={(e) => setSlug(e.target.value)}
         placeholder="slug（如：my-project）"
-        className="rounded-md border border-border bg-neutral-1 px-3 py-1.5 text-copy-13 text-neutral-9 outline-none placeholder-neutral-4 focus:border-accent/50"
+        className="field min-w-44 flex-1"
         required
       />
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="名称（如：My Project）"
-        className="rounded-md border border-border bg-neutral-1 px-3 py-1.5 text-copy-13 text-neutral-9 outline-none placeholder-neutral-4 focus:border-accent/50"
+        className="field min-w-44 flex-1"
         required
       />
-      <button
-        type="submit"
-        disabled={submitting}
-        className="rounded-md bg-accent px-3 py-1.5 text-copy-13 font-medium text-white transition hover:bg-accent/90 disabled:opacity-50"
-      >
+      <button type="submit" disabled={submitting} className="btn-primary">
         {submitting ? '创建中…' : '新建 Realm'}
       </button>
-      {error && <p className="text-label-12 text-red-600">{error}</p>}
+      {error && <p className="w-full text-label-12 text-error">{error}</p>}
       {created && (
-        <p className="text-label-12 text-emerald-600">创建成功！</p>
+        <p className="w-full text-label-12 text-success">创建成功！</p>
       )}
     </form>
   )

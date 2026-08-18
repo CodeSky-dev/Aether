@@ -26,3 +26,52 @@ body {
   font-family: var(--app-font-sans);
   -webkit-font-smoothing: antialiased;
 }
+
+/* 余白式的克制点缀：选区与焦点交给梅红（戒律 04：accent 只承担焦点与品牌） */
+::selection {
+  background: color-mix(in oklab, var(--color-accent) 16%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--color-accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 入场动效：一次轻微的升起（240ms，整页仅编排一次，逐段错峰） */
+@keyframes yohaku-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.enter {
+  animation: yohaku-rise 0.24s ease-out both;
+}
+
+@layer components {
+  /* 表单控件统一形态：ring 分隔（戒律 07），focus 转梅红描边（戒律 04） */
+  .field {
+    @apply rounded-md bg-neutral-1 px-3 py-2 text-copy-14 text-neutral-9 ring-1 ring-border outline-none transition placeholder:text-neutral-4 focus:ring-accent disabled:opacity-50;
+  }
+  /* 主按钮：accent 填充 + 白字（界面占比 ≤ 5%） */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md bg-accent px-4 py-2 text-copy-14 font-medium text-white transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  /* 次按钮：中性填充 + ring */
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md bg-neutral-2 px-4 py-2 text-copy-14 text-neutral-9 ring-1 ring-border transition hover:bg-neutral-3 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+}

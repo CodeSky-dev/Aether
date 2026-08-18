@@ -344,24 +344,30 @@ export default function CurrentEditor({
     [remoteCursors, textValue],
   )
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-3">
-        <span className={`inline-flex h-2 w-2 rounded-full ${connected ? 'bg-emerald-500' : 'bg-neutral-300'}`} />
-        <span className="text-label-12 text-neutral-5">{connected ? '已连接（轮询中）' : '连接中…'}</span>
+    <div className="flex flex-col gap-2.5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span
+          className={`inline-flex h-2 w-2 rounded-full transition-colors ${
+            connected ? 'bg-success' : 'animate-pulse bg-neutral-4'
+          }`}
+        />
+        <span className="text-label-12 text-neutral-7">
+          {connected ? '已连接（轮询中）' : '连接中…'}
+        </span>
         {saving && <span className="text-label-12 text-accent">保存中…</span>}
         {remoteCursors.length > 0 && (
-          <span className="text-label-12 text-neutral-4">
+          <span className="text-label-12 text-neutral-6">
             {remoteCursors.length} 位实体在线
           </span>
         )}
       </div>
       {error && (
-        <p className="rounded-md bg-red-500/10 px-3 py-2 text-label-12 text-red-600">{error}</p>
+        <p className="rounded-md bg-error/10 px-3 py-2 text-label-12 text-error">{error}</p>
       )}
       <div className="relative">
         <textarea
           ref={textareaRef}
-          className="min-h-64 w-full resize-y rounded-lg border border-border bg-neutral-1 p-3 text-copy-14 font-mono leading-relaxed text-neutral-9 placeholder-neutral-4 outline-none focus:border-accent/50"
+          className="field min-h-64 w-full resize-y bg-paper p-4 font-mono leading-relaxed"
           placeholder="编辑 Current…（变更经 Server Actions 落库，2s 轮询同步远端与实体光标）"
           spellCheck={false}
           onSelect={handleSelectionChange}
@@ -387,7 +393,7 @@ export default function CurrentEditor({
                 style={{ backgroundColor: cursor.color }}
               />
               <span
-                className="absolute top-4 left-0 whitespace-nowrap rounded px-1 py-0.5 text-label-12 text-white shadow-sm"
+                className="absolute top-4 left-0 whitespace-nowrap rounded px-1 py-0.5 text-label-12 text-white"
                 style={{ backgroundColor: cursor.color }}
               >
                 {cursor.actorName}
@@ -405,7 +411,7 @@ export default function CurrentEditor({
                 className="inline-block h-2 w-2 rounded-full"
                 style={{ backgroundColor: cursor.color }}
               />
-              <span className="text-label-12 text-neutral-5">{cursor.actorName}</span>
+              <span className="text-label-12 text-neutral-6">{cursor.actorName}</span>
             </div>
           ))}
         </div>

@@ -1,8 +1,10 @@
 // @aether/web · /realms/[id]/audit 页面：审计记录列表
+// Yohaku：eyebrow 承载 slug，记录列表以 hairline 分隔呈现台账质感。
 import { listAuditLogs } from '@/lib/audit'
 import { listRealms } from '@/lib/realms'
 import AuditLogList from '@/components/audit-log-list'
 import NavShell from '@/components/nav-shell'
+import PageHeader from '@/components/page-header'
 import { notFound } from 'next/navigation'
 export const dynamic = 'force-dynamic'
 const INITIAL_PAGE_SIZE = 50
@@ -21,13 +23,12 @@ export default async function AuditPage({ params }: PageProps) {
   return (
     // P1-4 修复：传入 currentRealmId，使 Sidebar 在审计页也能渲染
     <NavShell currentRealmName={realm.name} currentRealmId={realm.id}>
-      <div className="max-w-3xl px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-title-28 font-medium text-neutral-10">Audit Vault</h1>
-          <p className="mt-1 text-copy-13 text-neutral-5">
-            {realm.name} 的所有操作审计记录（人 + Entity）
-          </p>
-        </div>
+      <div className="mx-auto max-w-3xl px-6 py-12 md:px-8">
+        <PageHeader
+          eyebrow={realm.slug}
+          title="Audit Vault"
+          description={`${realm.name} 的全部操作审计记录（人 + Entity）。`}
+        />
         <AuditLogList realmId={realmId} initialLogs={logs} />
       </div>
     </NavShell>

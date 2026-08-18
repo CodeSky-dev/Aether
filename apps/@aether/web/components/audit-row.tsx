@@ -1,4 +1,5 @@
 // @aether/web · 审计行组件
+// Yohaku：hairline 台账行——人/Entity 以 chip 区分（Entity 用縹 hanada），等宽数字承载时间与指纹。
 'use client'
 import { type AuditRow } from '@/lib/audit'
 const actionLabel: Record<string, string> = {
@@ -10,6 +11,11 @@ const actionLabel: Record<string, string> = {
 }
 function actorTypeLabel(type: string): string {
   return type === 'human' ? '人' : 'Entity'
+}
+function actorTypeClass(type: string): string {
+  return type === 'human'
+    ? 'bg-neutral-2 text-neutral-7'
+    : 'bg-info/10 text-info'
 }
 function formatTimestamp(ts: Date | string): string {
   const d = typeof ts === 'string' ? new Date(ts) : ts
@@ -33,25 +39,35 @@ export default function AuditRowItem({ row }: AuditRowProps) {
   const label = actionLabel[row.action] ?? row.action
   const target = row.doc_ref ?? row.entity_id ?? ''
   return (
-    <div className="flex flex-col gap-1 rounded-md border border-border bg-neutral-1 px-3 py-2 text-label-12">
-      <div className="flex items-center gap-4">
-        <span className="shrink-0 rounded px-1.5 py-0.5 text-label-12 bg-neutral-2 text-neutral-7">
+    <div className="flex flex-col gap-1 border-b border-border py-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <span
+          className={`shrink-0 rounded px-1.5 py-0.5 text-label-12 ${actorTypeClass(row.actor_type)}`}
+        >
           {actorTypeLabel(row.actor_type)}
         </span>
-        <span className="shrink-0 font-mono text-neutral-8">{label}</span>
+        <span className="shrink-0 text-copy-13 font-medium text-neutral-8">{label}</span>
         {/* P3-22 修复：展示 actor_id，增强审计可追溯性 */}
-        <span className="shrink-0 font-mono text-label-12 text-neutral-4" title={row.actor_id}>
+        <span
+          className="shrink-0 font-mono text-label-12 text-neutral-6"
+          title={row.actor_id}
+        >
           {shortHash(row.actor_id)}
         </span>
-        <span className="min-w-0 flex-1 truncate text-neutral-5">{target || '—'}</span>
-        <span className="shrink-0 text-neutral-4">
+        <span className="min-w-0 flex-1 truncate font-mono text-label-12 text-neutral-6">
+          {target || '—'}
+        </span>
+        <span className="shrink-0 font-mono text-label-12 text-neutral-6 tabular-nums">
           {formatTimestamp(row.created_at)}
         </span>
       </div>
       {/* P3-22 修复：展示 payload_hash（sha256），用于审计完整性校验 */}
-      <div className="flex items-center gap-2 pl-1">
-        <span className="text-label-12 text-neutral-4">payload_hash:</span>
-        <span className="font-mono text-label-12 text-neutral-4" title={row.payload_hash}>
+      <div className="flex items-center gap-2 pl-0.5">
+        <span className="text-label-12 text-neutral-6">payload</span>
+        <span
+          className="font-mono text-label-12 text-neutral-6"
+          title={row.payload_hash}
+        >
           {shortHash(row.payload_hash)}
         </span>
       </div>

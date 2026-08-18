@@ -1,4 +1,5 @@
 // @aether/web · 新建 Thread 表单（Client Component）
+// Yohaku：.field 统一控件，语义色只表达状态，按钮右对齐保持视觉重量平衡。
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -62,44 +63,48 @@ export default function CreateThreadForm({ realmId }: CreateThreadFormProps) {
     }
   }
   return (
-    <form onSubmit={(e) => { void handleSubmit(e) }} className="flex w-80 flex-col gap-2">
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Thread 标题…"
-        className="rounded-md border border-border bg-neutral-1 px-3 py-1.5 text-copy-13 text-neutral-9 outline-none placeholder-neutral-4 focus:border-accent/50"
-        required
-      />
-      <select
-        value={projectId}
-        onChange={(e) => setProjectId(e.target.value)}
-        disabled={loadingProjects || projects.length === 0}
-        className="rounded-md border border-border bg-neutral-1 px-3 py-1.5 text-copy-13 text-neutral-9 outline-none focus:border-accent/50 disabled:opacity-50"
-      >
-        {loadingProjects ? (
-          <option value="">加载 Project…</option>
-        ) : projects.length === 0 ? (
-          <option value="">无可用 Project</option>
-        ) : (
-          projects.map((p) => (
-            <option key={p.id} value={p.id}>{p.name} ({p.slug})</option>
-          ))
-        )}
-      </select>
-      <input
-        value={manifestationUrl}
-        onChange={(e) => setManifestationUrl(e.target.value)}
-        placeholder="Manifestation URL（可选）"
-        className="rounded-md border border-border bg-neutral-1 px-3 py-1.5 text-label-12 text-neutral-7 outline-none placeholder-neutral-4 focus:border-accent/50"
-      />
-      <button
-        type="submit"
-        disabled={submitting || projects.length === 0}
-        className="self-end rounded-md bg-accent px-3 py-1.5 text-copy-13 font-medium text-white transition hover:bg-accent/90 disabled:opacity-50"
-      >
-        {submitting ? '创建中…' : '新建 Thread'}
-      </button>
-      {error && <p className="text-label-12 text-red-600">{error}</p>}
+    <form onSubmit={(e) => { void handleSubmit(e) }} className="mt-3 flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2">
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Thread 标题…"
+          className="field min-w-52 flex-[2]"
+          required
+        />
+        <select
+          value={projectId}
+          onChange={(e) => setProjectId(e.target.value)}
+          disabled={loadingProjects || projects.length === 0}
+          className="field min-w-44 flex-1"
+        >
+          {loadingProjects ? (
+            <option value="">加载 Project…</option>
+          ) : projects.length === 0 ? (
+            <option value="">无可用 Project</option>
+          ) : (
+            projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name} ({p.slug})</option>
+            ))
+          )}
+        </select>
+      </div>
+      <div className="flex flex-wrap items-start gap-2">
+        <input
+          value={manifestationUrl}
+          onChange={(e) => setManifestationUrl(e.target.value)}
+          placeholder="Manifestation URL（可选，绑定 Vercel Preview）"
+          className="field min-w-52 flex-[2]"
+        />
+        <button
+          type="submit"
+          disabled={submitting || projects.length === 0}
+          className="btn-primary flex-1 sm:flex-none"
+        >
+          {submitting ? '创建中…' : '新建 Thread'}
+        </button>
+      </div>
+      {error && <p className="text-label-12 text-error">{error}</p>}
     </form>
   )
 }
