@@ -2,6 +2,7 @@
 // 流式输出：审计台账可能远大于单次响应内存预算，按键集游标边查边写。
 import { randomUUID } from 'node:crypto'
 import { realms } from '@aether/db'
+import { EntitlementDeniedError } from '@aether/entitlement'
 import { eq } from 'drizzle-orm'
 import type { NextRequest } from 'next/server'
 import { requireEntitlement, resolveCurrentActor } from '@/lib/auth-guard'
@@ -17,7 +18,11 @@ import {
   type AuditExportQuery,
 } from '@/lib/audit-export'
 import { getDb } from '@/lib/db'
-import { READ_MEMBER_ROLES, requireRealmRole } from '@/lib/membership-guard'
+import {
+  MEMBERSHIP_DENIED_MESSAGE_PREFIX,
+  READ_MEMBER_ROLES,
+  requireRealmRole,
+} from '@/lib/membership-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,6 +31,17 @@ const UUID_REGEX =
 
 interface RouteParams {
   params: Promise<{ realmId: string }>
+}
+
+function isAccessDenied(error: unknown): boolean {
+  if (error instanceof EntitlementDeniedError) return true
+  if (!(error instanceof Error)) return false
+  return (
+    error.message.startsWith(MEMBERSHIP_DENIED_MESSAGE_PREFIX) ||
+    error.message.startsWith('Entitlement denied fail-closed:') ||
+    error.message.startsWith('Invalid realmId:') ||
+    error.message.startsWith('Realm not found:')
+  )
 }
 
 export async function GET(
@@ -59,6 +75,21 @@ export async function GET(
     )
   }
 
+  try {
+    await requireEntitlement(realmId, { resource: 'audit', action: 'read' })
+    await requireRealmRole(realmId, actor, READ_MEMBER_ROLES)
+  } catch (error) {
+    if (isAccessDenied(error)) {
+      return Response.json({ error: 'Audit export denied' }, { status: 403 })
+    }
+    // eslint-disable-next-line no-console
+    console.error('[audit-export] authorization check failed', error)
+    return Response.json(
+      { error: 'Audit export temporarily unavailable' },
+      { status: 503 },
+    )
+  }
+
   const db = getDb()
   const [realm] = await db
     .select({ slug: realms.slug })
@@ -67,16 +98,6 @@ export async function GET(
     .limit(1)
   if (!realm) {
     return Response.json({ error: 'Realm not found' }, { status: 404 })
-  }
-
-  try {
-    await requireEntitlement(realmId, { resource: 'audit', action: 'read' })
-    await requireRealmRole(realmId, actor, READ_MEMBER_ROLES)
-  } catch (_error) {
-    return Response.json(
-      { error: 'Audit export denied' },
-      { status: 403 },
-    )
   }
 
   await recordAuditExport(db, {
