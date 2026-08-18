@@ -19,6 +19,10 @@ export const READ_MEMBER_ROLES: readonly RealmMembershipRole[] = [
   'member',
 ]
 
+/** 拒绝文案前缀：页面据此把授权失败与内部错误区分开。 */
+export const MEMBERSHIP_DENIED_MESSAGE_PREFIX =
+  'Realm membership does not permit this operation'
+
 /**
  * 校验 actor 在该 Realm 持有 Realm 级 active membership 且角色在允许集合内。
  * 先做一次 JIT 镜像，让 Better-Auth organization 成员首次访问也能通过。
@@ -51,7 +55,7 @@ export async function requireRealmRole(
 
   if (!membership || !allowedRoles.includes(membership.role)) {
     throw new Error(
-      'Realm membership does not permit this operation: an active Realm membership with a sufficient role is required',
+      `${MEMBERSHIP_DENIED_MESSAGE_PREFIX}: an active Realm membership with a sufficient role is required`,
     )
   }
   return membership.role

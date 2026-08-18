@@ -12,6 +12,7 @@ import { useState } from 'react'
 interface RealmInvitationListProps {
   realmId: string
   invitations: RealmInvitation[]
+  currentActorRole: string
 }
 
 function formatDate(value: Date): string {
@@ -24,10 +25,14 @@ function formatDate(value: Date): string {
 export default function RealmInvitationList({
   realmId,
   invitations,
+  currentActorRole,
 }: RealmInvitationListProps) {
   const router = useRouter()
   const [revokingId, setRevokingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // 邀请列表对 member 可读，但撤销要求 owner / admin：无权者不显示按钮而不是点了才报错。
+  const canRevoke =
+    currentActorRole === 'owner' || currentActorRole === 'admin'
 
   async function revoke(invitationId: string) {
     setRevokingId(invitationId)
@@ -64,7 +69,7 @@ export default function RealmInvitationList({
                   {formatDate(invitation.expiresAt)}
                 </p>
               </div>
-              {invitation.status === 'pending' && (
+              {canRevoke && invitation.status === 'pending' && (
                 <button
                   type="button"
                   className="btn-ghost"
