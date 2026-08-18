@@ -2,11 +2,12 @@
 'use server'
 
 import { getDb } from '@/lib/db'
-import { auditLog, members, realms } from '@aether/db'
+import { members, realms } from '@aether/db'
 import { desc } from 'drizzle-orm'
 import { createRealmOrganization } from '@aether/auth'
 import { tryGetAuth } from '@/lib/auth'
 import { resolveCurrentActor } from '@/lib/auth-guard'
+import { recordPermissionChange } from '@/lib/audit'
 
 export interface RealmRow {
   id: string
@@ -72,18 +73,15 @@ export async function createRealm(
         entitlements: {},
         status: 'active',
       })
-      await tx.insert(auditLog).values({
-        realm_id: realm.id,
-        actor_type: actor.actorType,
-        actor_id: actor.actorId,
-        action: 'permission_change',
+      await recordPermissionChange(tx, {
+        realmId: realm.id,
+        actor,
         target: {
           kind: 'realm_membership',
           role: 'owner',
           actor_id: actor.actorId,
         },
-        payload_hash: `realm-owner:${realm.id}:${actor.actorId}`,
-        idempotency_key: `realm-owner:${realm.id}:${actor.actorId}`,
+        idempotencyKey: `realm-owner:${realm.id}:${actor.actorId}`,
         result: { status: 'active' },
       })
       return realm

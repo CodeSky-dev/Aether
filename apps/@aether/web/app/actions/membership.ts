@@ -66,19 +66,13 @@ export interface InviteRealmMemberInput {
 export async function inviteRealmMember(
   input: InviteRealmMemberInput,
 ) {
-  const realm = await getRealmOrganization(input.realmId)
   await requireEntitlement(input.realmId, {
     resource: 'realm',
     action: 'manage_member',
   })
+  const realm = await getRealmOrganization(input.realmId)
   if (!isAllowedRole(input.role)) {
     throw new Error('Invalid membership role: expected owner, admin, or member')
-  }
-  const actor = await resolveCurrentActor()
-  if (actor === null) {
-    throw new Error(
-      'Cannot invite Realm members without an authenticated session',
-    )
   }
   return inviteToOrganization(requireAuth(), await headers(), {
     organizationId: realm.authOrgId,
@@ -94,11 +88,11 @@ export interface ListRealmInvitationsInput {
 export async function listRealmInvitations(
   input: ListRealmInvitationsInput,
 ) {
-  const realm = await getRealmOrganization(input.realmId)
   await requireEntitlement(input.realmId, {
     resource: 'realm',
     action: 'read',
   })
+  const realm = await getRealmOrganization(input.realmId)
   return listOrganizationInvitations(requireAuth(), await headers(), {
     organizationId: realm.authOrgId,
   })

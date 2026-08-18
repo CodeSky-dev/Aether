@@ -5,7 +5,6 @@ import {
   findOrganizationMemberRoles,
 } from '@aether/auth'
 import {
-  auditLog,
   members,
   realms,
   realmGuard,
@@ -13,10 +12,11 @@ import {
 import type { ActorType } from '@aether/types'
 import { and, eq } from 'drizzle-orm'
 import { getDb } from '@/lib/db'
-import { tryGetAuth } from '@/lib/auth'
+import { recordPermissionChange } from '@/lib/audit'
 import { isPlaceholderOrganization } from '@/lib/membership-utils'
 
-const KNOWN_ROLES = new Set(['owner', 'admin', 'member'])
+const ROLE_PRIORITY = ['owner', 'admin', 'member'] as const
+type RealmRole = (typeof ROLE_PRIORITY)[number]
 const warnedUnknownRoles = new Set<string>()
 
 export interface EnsureRealmMembershipInput {
@@ -59,51 +59,47 @@ export async function ensureRealmMembership(
     .limit(1)
   if (!realm || isPlaceholderOrganization(realm.authOrgId)) return
 
-  const auth = tryGetAuth()
-  if (auth === null) return
-
   const roles = await findOrganizationMemberRoles(db, {
     organizationId: realm.authOrgId,
     userId: input.actorId,
   })
-  const knownRoles = roles.filter((role) => {
-    if (KNOWN_ROLES.has(role)) return true
+  const knownRoles = roles.filter((role): role is RealmRole => {
+    if (ROLE_PRIORITY.includes(role as RealmRole)) return true
     warnUnknownRole(role)
     return false
   })
-  if (knownRoles.length === 0) return
+  const role = ROLE_PRIORITY.find((candidate) => knownRoles.includes(candidate))
+  if (role === undefined) return
 
   await db.transaction(async (tx) => {
-    for (const role of knownRoles) {
-      const inserted = await tx
-        .insert(members)
-        .values({
-          realm_id: input.realmId,
-          project_id: null,
-          actor_type: input.actorType,
-          actor_id: input.actorId,
-          role,
-          entitlements: {},
-          status: 'active',
-        })
-        .onConflictDoNothing()
-        .returning({ id: members.id })
-
-      if (inserted.length === 0) continue
-      await tx.insert(auditLog).values({
+    const inserted = await tx
+      .insert(members)
+      .values({
         realm_id: input.realmId,
+        project_id: null,
         actor_type: input.actorType,
         actor_id: input.actorId,
-        action: 'permission_change',
-        target: {
-          kind: 'realm_membership',
-          role,
-          actor_id: input.actorId,
-        },
-        payload_hash: `membership:${input.realmId}:${input.actorId}:${role}`,
-        idempotency_key: `membership:${input.realmId}:${input.actorId}:${role}`,
-        result: { status: 'active' },
+        role,
+        entitlements: {},
+        status: 'active',
       })
-    }
+      .onConflictDoNothing()
+      .returning({ id: members.id })
+
+    if (inserted.length === 0) return
+    await recordPermissionChange(tx, {
+      realmId: input.realmId,
+      actor: {
+        actorType: input.actorType,
+        actorId: input.actorId,
+      },
+      target: {
+        kind: 'realm_membership',
+        role,
+        actor_id: input.actorId,
+      },
+      idempotencyKey: `membership:${input.realmId}:${input.actorId}:${role}`,
+      result: { status: 'active' },
+    })
   })
 }

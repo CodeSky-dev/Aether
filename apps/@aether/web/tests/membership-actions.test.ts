@@ -95,7 +95,10 @@ describe('membership actions', () => {
     await expect(
       listRealmInvitations({ realmId: 'realm-1' }),
     ).rejects.toThrow('not bound to a Better-Auth organization')
-    expect(mockedRequireEntitlement).not.toHaveBeenCalled()
+    expect(mockedRequireEntitlement).toHaveBeenCalledWith('realm-1', {
+      resource: 'realm',
+      action: 'read',
+    })
   })
 
   it('checks manage_member before inviting', async () => {

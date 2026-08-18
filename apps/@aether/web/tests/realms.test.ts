@@ -21,6 +21,10 @@ vi.mock('@/lib/auth-guard', () => ({
   resolveCurrentActor: vi.fn(),
 }))
 
+vi.mock('@/lib/audit', () => ({
+  recordPermissionChange: vi.fn(),
+}))
+
 const mockedCreateOrganization = vi.mocked(createRealmOrganization)
 const mockedGetDb = vi.mocked(getDb)
 const mockedTryGetAuth = vi.mocked(tryGetAuth)
@@ -63,18 +67,13 @@ describe('createRealm', () => {
   it('binds a configured session to an organization and owner membership', async () => {
     const transaction = vi.fn(async (callback: (tx: unknown) => Promise<unknown>) =>
       callback({
-        insert: vi.fn((table: unknown) => {
-          if (table) {
-            return {
-              values: vi.fn(() => ({
-                returning: vi.fn().mockResolvedValue([
-                  { id: 'realm-1', slug: 'demo', name: 'Demo' },
-                ]),
-              })),
-            }
-          }
-          return returningInsert([])
-        }),
+        insert: vi.fn(() => ({
+          values: vi.fn(() => ({
+            returning: vi.fn().mockResolvedValue([
+              { id: 'realm-1', slug: 'demo', name: 'Demo' },
+            ]),
+          })),
+        })),
       }),
     )
     mockedTryGetAuth.mockReturnValue({} as NonNullable<ReturnType<typeof tryGetAuth>>)

@@ -1,10 +1,46 @@
 // @aether/web · Audit 记录 Server Actions
 'use server'
+import { createHash } from 'node:crypto'
 import { getDb } from '@/lib/db'
 import { auditLog } from '@aether/db'
 import { and, desc, eq } from 'drizzle-orm'
 import type { ActorType, AuditAction } from '@aether/types'
 import { requireEntitlement } from '@/lib/auth-guard'
+
+type AuditTransaction = Parameters<
+  Parameters<ReturnType<typeof getDb>['transaction']>[0]
+>[0]
+
+interface RecordPermissionChangeInput {
+  realmId: string
+  actor: {
+    actorType: ActorType
+    actorId: string
+  }
+  target: Record<string, unknown>
+  idempotencyKey: string
+  result: Record<string, unknown>
+}
+
+export async function recordPermissionChange(
+  tx: AuditTransaction,
+  input: RecordPermissionChangeInput,
+): Promise<void> {
+  const payloadHash = createHash('sha256')
+    .update(JSON.stringify(input.target), 'utf8')
+    .digest('hex')
+
+  await tx.insert(auditLog).values({
+    realm_id: input.realmId,
+    actor_type: input.actor.actorType,
+    actor_id: input.actor.actorId,
+    action: 'permission_change',
+    target: input.target,
+    payload_hash: payloadHash,
+    idempotency_key: input.idempotencyKey,
+    result: input.result,
+  })
+}
 export interface AuditRow {
   id: string
   // P2-12 修复：realm_id 是 map 返回的实际字段，补进接口避免契约外字段漂移

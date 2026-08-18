@@ -58,7 +58,7 @@ CREATE UNIQUE INDEX members_project_actor_uniq
 `ensureRealmMembership({ realmId, actorType, actorId })`：
 
 1. Aether `members` 已有 active 行 → 直接返回（快路径，不触碰 auth 表）；
-2. 否则用 `realms.auth_org_id` 查 Better-Auth `member`：命中则把角色镜像为 Aether membership（realm 级、`project_id = null`、`status = 'active'`、`entitlements = {}`），逗号分隔的多角色为**每个已知角色各写一行**（Entitlement 引擎已支持多 membership 任一放行），未知角色跳过并 warn；
+2. 否则用 `realms.auth_org_id` 查 Better-Auth `member`：命中则把角色镜像为单条 Aether membership（realm 级、`project_id = null`、`status = 'active'`、`entitlements = {}`），逗号分隔的多角色按 `owner > admin > member` 取最高已知角色，未知角色跳过并 warn；
 3. 写入用 `onConflictDoNothing` 幂等，并对新增行写 `audit_log` `permission_change`；
 4. 未命中 → 不写任何行，enforcement 继续 fail-closed。
 
@@ -84,7 +84,7 @@ Realm 未绑定真实 organization（`auth_org_id` 仍是占位）时，这三�
 
 - [x] `members` 两个 partial unique index 已加并生成迁移；重复数据导致迁移失败属预期，不在迁移里删数据
 - [x] 有会话时 `createRealm` 绑定真实 org、创建者获得 owner membership、审计留痕；无会话时行为与现在完全一致
-- [x] `ensureRealmMembership` 幂等、镜像多角色、未命中不写入、关闭态不产生额外查询
+- [x] `ensureRealmMembership` 幂等、按最高权限角色镜像多角色、未命中不写入、关闭态不产生额外查询
 - [x] 三个邀请 Server Action 的授权分别为 `realm:manage_member` / `realm:read` / 会话自身；未绑定 org 时报可读错误
 - [x] `AETHER_ENTITLEMENT_ENABLED=true` 时，绑定了 org 的 Realm 中其成员可正常读写，非成员仍 fail-closed
 - [x] `pnpm typecheck` / `pnpm lint` / `pnpm test` 全绿；新增测试覆盖幂等、多角色拆分、未命中、占位 org、角色白名单

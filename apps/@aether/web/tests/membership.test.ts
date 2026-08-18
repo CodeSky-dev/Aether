@@ -1,23 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ensureRealmMembership } from '@/lib/membership'
 import { findOrganizationMemberRoles } from '@aether/auth'
-import { tryGetAuth } from '@/lib/auth'
 import { getDb } from '@/lib/db'
 
 vi.mock('@aether/auth', () => ({
   findOrganizationMemberRoles: vi.fn(),
 }))
 
-vi.mock('@/lib/auth', () => ({
-  tryGetAuth: vi.fn(),
-}))
-
 vi.mock('@/lib/db', () => ({
   getDb: vi.fn(),
 }))
 
+vi.mock('@/lib/audit', () => ({
+  recordPermissionChange: vi.fn(),
+}))
+
 const mockedFindRoles = vi.mocked(findOrganizationMemberRoles)
-const mockedTryGetAuth = vi.mocked(tryGetAuth)
 const mockedGetDb = vi.mocked(getDb)
 
 function createSelectQueue(results: unknown[][]) {
@@ -38,7 +36,6 @@ function createSelectQueue(results: unknown[][]) {
 describe('ensureRealmMembership', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockedTryGetAuth.mockReturnValue({} as NonNullable<ReturnType<typeof tryGetAuth>>)
   })
 
   it('returns on the active membership fast path without querying Better-Auth', async () => {
@@ -55,30 +52,23 @@ describe('ensureRealmMembership', () => {
     expect(select).toHaveBeenCalledTimes(1)
   })
 
-  it('mirrors known multi-roles and does not duplicate conflicts', async () => {
+  it('mirrors multi-roles as one membership with the highest role', async () => {
     const select = createSelectQueue([[], [{ authOrgId: 'org-1' }]])
-    const insertedRoles = ['admin', 'member']
-    let insertCount = 0
+    let insertedRole: string | undefined
     const db = {
       select,
       transaction: vi.fn(async (callback: (tx: unknown) => Promise<void>) => {
         const tx = {
           insert: vi.fn(() => {
-            insertCount += 1
-            if (insertCount % 2 === 0) {
-              return {
-                values: vi.fn(() => ({
-                  returning: vi.fn().mockResolvedValue([]),
-                })),
-              }
-            }
-            const role = insertedRoles[Math.floor(insertCount / 2)]
             return {
-              values: vi.fn(() => ({
-                onConflictDoNothing: vi.fn(() => ({
-                  returning: vi.fn().mockResolvedValue([{ id: role }]),
-                })),
-              })),
+              values: vi.fn((values: { role?: string }) => {
+                insertedRole = values.role
+                return {
+                  onConflictDoNothing: vi.fn(() => ({
+                    returning: vi.fn().mockResolvedValue([{ id: 'membership-1' }]),
+                  })),
+                }
+              }),
             }
           }),
         }
@@ -86,7 +76,7 @@ describe('ensureRealmMembership', () => {
       }),
     }
     mockedGetDb.mockReturnValue(db as never)
-    mockedFindRoles.mockResolvedValue(['admin', 'member'])
+    mockedFindRoles.mockResolvedValue(['member', 'owner', 'admin'])
 
     await ensureRealmMembership({
       realmId: 'realm-1',
@@ -99,6 +89,7 @@ describe('ensureRealmMembership', () => {
       userId: 'user-1',
     })
     expect(db.transaction).toHaveBeenCalledTimes(1)
+    expect(insertedRole).toBe('owner')
   })
 
   it('does not write when the organization member is not found', async () => {
