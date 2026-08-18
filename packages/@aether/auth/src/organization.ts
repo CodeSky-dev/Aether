@@ -95,6 +95,19 @@ export function listOrganizationInvitations(
   })
 }
 
+export function cancelOrganizationInvitation(
+  auth: AuthInstance,
+  headers: Headers,
+  input: { invitationId: string },
+) {
+  return auth.api.cancelInvitation({
+    headers,
+    body: {
+      invitationId: input.invitationId,
+    },
+  })
+}
+
 export function acceptOrganizationInvitation(
   auth: AuthInstance,
   headers: Headers,

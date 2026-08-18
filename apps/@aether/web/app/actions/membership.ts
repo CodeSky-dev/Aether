@@ -3,11 +3,12 @@
 
 import {
   acceptOrganizationInvitation,
+  cancelOrganizationInvitation,
   inviteToOrganization,
   listOrganizationInvitations,
   type RealmOrganizationRole,
 } from '@aether/auth'
-import { realms } from '@aether/db'
+import { members, realmGuard, realms } from '@aether/db'
 import { eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { getDb } from '@/lib/db'
@@ -96,17 +97,115 @@ export interface ListRealmInvitationsInput {
   realmId: string
 }
 
+export interface RealmInvitation {
+  id: string
+  organizationId: string
+  email: string
+  role: string
+  status: string
+  expiresAt: Date
+  createdAt: Date
+}
+
 export async function listRealmInvitations(
   input: ListRealmInvitationsInput,
-) {
+): Promise<RealmInvitation[]> {
   await requireAuthenticatedActor()
   await requireEntitlement(input.realmId, {
     resource: 'realm',
     action: 'read',
   })
   const realm = await getRealmOrganization(input.realmId)
-  return listOrganizationInvitations(requireAuth(), await headers(), {
+  const invitations = await listOrganizationInvitations(requireAuth(), await headers(), {
     organizationId: realm.authOrgId,
+  })
+  return invitations.map((invitation) => ({
+    id: invitation.id,
+    organizationId: invitation.organizationId,
+    email: invitation.email,
+    role: invitation.role,
+    status: invitation.status,
+    expiresAt: invitation.expiresAt,
+    createdAt: invitation.createdAt,
+  }))
+}
+
+export interface RealmMemberRow {
+  id: string
+  actor_type: 'human' | 'entity'
+  actor_id: string
+  role: string
+  status: 'active' | 'suspended' | 'invited'
+  project_id: string | null
+  created_at: Date
+}
+
+export interface ListRealmMembersInput {
+  realmId: string
+}
+
+export async function listRealmMembers(
+  input: ListRealmMembersInput,
+): Promise<{ members: RealmMemberRow[]; currentActorRole: string | null }> {
+  const actor = await requireAuthenticatedActor()
+  await requireEntitlement(input.realmId, {
+    resource: 'realm',
+    action: 'read',
+  })
+  const rows = await getDb()
+    .select({
+      id: members.id,
+      actor_type: members.actor_type,
+      actor_id: members.actor_id,
+      role: members.role,
+      status: members.status,
+      project_id: members.project_id,
+      created_at: members.created_at,
+    })
+    .from(members)
+    .where(realmGuard(members, input.realmId))
+
+  const currentMembership = rows.find(
+    (row) =>
+      row.project_id === null &&
+      row.actor_type === actor.actorType &&
+      row.actor_id === actor.actorId,
+  )
+  return {
+    members: rows,
+    currentActorRole: currentMembership?.role ?? null,
+  }
+}
+
+export interface RevokeRealmInvitationInput {
+  realmId: string
+  invitationId: string
+}
+
+export async function revokeRealmInvitation(
+  input: RevokeRealmInvitationInput,
+) {
+  await requireAuthenticatedActor()
+  await requireEntitlement(input.realmId, {
+    resource: 'realm',
+    action: 'manage_member',
+  })
+  const realm = await getRealmOrganization(input.realmId)
+  const auth = requireAuth()
+  const requestHeaders = await headers()
+  const invitationList = await listOrganizationInvitations(auth, requestHeaders, {
+    organizationId: realm.authOrgId,
+  })
+  const invitation = invitationList.find(
+    (candidate) =>
+      candidate.id === input.invitationId &&
+      candidate.organizationId === realm.authOrgId,
+  )
+  if (!invitation) {
+    throw new Error('Invitation does not belong to this Realm organization')
+  }
+  return cancelOrganizationInvitation(auth, requestHeaders, {
+    invitationId: invitation.id,
   })
 }
 
@@ -142,5 +241,5 @@ export async function acceptRealmInvitation(
     actorType: actor.actorType,
     actorId: actor.actorId,
   })
-  return result
+  return { ...result, realmId: realm.id }
 }
