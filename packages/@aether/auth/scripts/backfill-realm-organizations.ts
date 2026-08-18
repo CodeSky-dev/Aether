@@ -2,7 +2,7 @@
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 import { drizzle } from 'drizzle-orm/postgres-js'
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import postgres from 'postgres'
 import {
   auditLog,
@@ -14,8 +14,12 @@ import {
   betterAuthSchema,
 } from '../src/schema.js'
 import { createAuth } from '../src/instance.js'
-import { createRealmOrganization, isPlaceholderOrganization } from '../src/organization.js'
-import { member, organization, user } from '../src/schema.js'
+import {
+  createRealmOrganization,
+  findOrganizationMemberRoles,
+  isPlaceholderOrganization,
+} from '../src/organization.js'
+import { organization, user } from '../src/schema.js'
 import { createHash } from 'node:crypto'
 
 export interface BackfillArgs {
@@ -265,20 +269,11 @@ function createDependencies(
         )
       }
 
-      // 必须是 owner 而不是「在里面就行」：否则 Realm 会被绑到用户只是普通成员的
-      // 同名 organization 上，Aether 侧写入 owner membership 而 Better-Auth 侧无权邀请。
-      const [ownerMember] = await db
-        .select({ userId: member.userId })
-        .from(member)
-        .where(
-          and(
-            eq(member.organizationId, existing.id),
-            eq(member.userId, ownerUserId),
-            eq(member.role, 'owner'),
-          ),
-        )
-        .limit(1)
-      if (!ownerMember) {
+      const ownerRoles = await findOrganizationMemberRoles(db, {
+        organizationId: existing.id,
+        userId: ownerUserId,
+      })
+      if (!ownerRoles.includes('owner')) {
         throw new Error(
           `organization slug ${slug} exists without the requested owner; resolve it manually`,
         )
