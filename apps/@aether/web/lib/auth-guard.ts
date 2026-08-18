@@ -7,7 +7,10 @@
 // 环境变量 AETHER_AUTH_GUARD_ENABLED 控制是否启用（默认 true）。
 // 开发调试时可设为 false 关闭守卫。
 'use server'
+import { headers } from 'next/headers'
+import { resolveSessionActor } from '@aether/auth'
 import { getDb } from '@/lib/db'
+import { getAuth } from '@/lib/auth'
 import { realms } from '@aether/db'
 import { eq } from 'drizzle-orm'
 import {
@@ -29,12 +32,15 @@ export interface CurrentActor {
   actorId: string
 }
 /**
- * 解析当前请求主体。
- * M3.8 阶段暂不接入 Better-Auth session，待 SSO/SCIM 落地后实现。
+ * 解析当前请求主体。浏览器会话只解析 human actor。
  */
-// eslint-disable-next-line @typescript-eslint/require-await
 export async function resolveCurrentActor(): Promise<CurrentActor | null> {
-  return null
+  const sessionActor = await resolveSessionActor(getAuth(), await headers())
+  if (sessionActor === null) return null
+  return {
+    actorType: sessionActor.actorType,
+    actorId: sessionActor.actorId,
+  }
 }
 /**
  * 校验 realmId 格式并确认 Realm 存在。

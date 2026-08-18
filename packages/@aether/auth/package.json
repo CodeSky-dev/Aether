@@ -27,7 +27,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "vitest run"
   },
   "dependencies": {
     "@aether/db": "workspace:*",
@@ -39,6 +40,7 @@
     "@aether/config": "workspace:*",
     "@types/node": "^26.2.0",
     "eslint": "^9.39.5",
-    "typescript": "^6.0.0"
+    "typescript": "^6.0.0",
+    "vitest": "^3.2.4"
   }
 }

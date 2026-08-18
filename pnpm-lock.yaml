@@ -121,6 +121,9 @@ importers:
 
   apps/@aether/web:
     dependencies:
+      '@aether/auth':
+        specifier: workspace:*
+        version: link:../../../packages/@aether/auth
       '@aether/current-sync':
         specifier: workspace:*
         version: link:../../../packages/@aether/current-sync
@@ -213,6 +216,9 @@ importers:
       typescript:
         specifier: ^6.0.0
         version: 6.0.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@26.2.0)(jiti@2.7.0)(lightningcss@1.33.0)(supports-color@7.2.0)(tsx@4.23.11)
 
   packages/@aether/config:
     dependencies:

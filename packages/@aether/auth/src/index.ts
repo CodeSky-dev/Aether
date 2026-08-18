@@ -4,3 +4,4 @@
 export * from './schema.js'
 export * from './permissions.js'
 export * from './instance.js'
+export * from './session-actor.js'
