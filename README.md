@@ -41,6 +41,7 @@ pnpm test
 | `REDIS_URL` | Redis 连接 URL（多实例广播） | 否 |
 | `PORT` | converge-server 监听端口（默认 1234） | 否 |
 | `AETHER_AUTH_GUARD_ENABLED` | 鉴权守卫开关（默认 true） | 否 |
+| `AETHER_ENTITLEMENT_ENABLED` | Entitlement Engine 强制判定开关（默认 false） | 否 |
 
 ## 项目结构
 
@@ -57,6 +58,7 @@ Aether/
 │   ├── @aether/current-sync/     # Yjs 适配层（序列化/反序列化/更新订阅）
 │   ├── @aether/state/            # Zustand store 与 Yjs 双向绑定
 │   ├── @aether/entity-core/      # Entity 身份、能力宣言、审计轨迹、Handoff 状态机
+│   ├── @aether/entitlement/      # 角色、作用域与资源三级授权判定
 │   ├── @aether/thread-bindings/  # Thread 代码锚点绑定、对话锻造、上下文重建
 │   ├── @aether/manifestation/    # Manifestation URL 绑定与版本追踪
 │   ├── @aether/ui/               # 共享 UI 组件与设计 tokens

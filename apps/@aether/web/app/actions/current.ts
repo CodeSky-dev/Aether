@@ -5,7 +5,7 @@
 'use server'
 import { getDb } from '@/lib/db'
 import { getBroadcastPort } from '@/lib/current/broadcast'
-import { requireRealmAccess } from '@/lib/auth-guard'
+import { requireEntitlement, requireRealmAccess } from '@/lib/auth-guard'
 import {
   appendUpdate,
   getCursor,
@@ -23,7 +23,11 @@ export async function appendCurrentUpdate(
   input: AppendUpdateInput,
 ): Promise<AppendUpdateResult> {
   // P2-18 修复：鉴权守卫 —— 防止向任意 doc 写入
-  await requireRealmAccess(input.realmId)
+  await requireEntitlement(input.realmId, {
+    resource: 'current',
+    action: 'converge',
+    resourceId: input.docRef,
+  })
   const db = getDb()
   const broadcast = getBroadcastPort()
   return appendUpdate(db, broadcast, input)
