@@ -21,7 +21,7 @@ vi.mock('@/lib/auth-guard', () => ({
   resolveCurrentActor: vi.fn(),
 }))
 
-vi.mock('@/lib/audit', () => ({
+vi.mock('@/lib/audit-write', () => ({
   recordPermissionChange: vi.fn(),
 }))
 

@@ -19,7 +19,7 @@ import {
   type EntitlementRequest,
 } from '@aether/entitlement'
 import type { ActorType } from '@aether/types'
-import { ensureRealmMembership } from '@/lib/membership'
+import { ensureRealmMembership } from '@/lib/membership-provisioning'
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 function isGuardEnabled(): boolean {
   return process.env.AETHER_AUTH_GUARD_ENABLED !== 'false'

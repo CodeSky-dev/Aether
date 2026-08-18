@@ -7,7 +7,7 @@ import { desc } from 'drizzle-orm'
 import { createRealmOrganization } from '@aether/auth'
 import { tryGetAuth } from '@/lib/auth'
 import { resolveCurrentActor } from '@/lib/auth-guard'
-import { recordPermissionChange } from '@/lib/audit'
+import { recordPermissionChange } from '@/lib/audit-write'
 
 export interface RealmRow {
   id: string

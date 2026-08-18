@@ -9,7 +9,7 @@ import {
   resolveCurrentActor,
 } from '@/lib/auth-guard'
 import { tryGetAuth } from '@/lib/auth'
-import { ensureRealmMembership } from '@/lib/membership'
+import { ensureRealmMembership } from '@/lib/membership-provisioning'
 import {
   acceptRealmInvitation,
   inviteRealmMember,
@@ -35,7 +35,7 @@ vi.mock('@/lib/auth', () => ({
   tryGetAuth: vi.fn(),
 }))
 
-vi.mock('@/lib/membership', () => ({
+vi.mock('@/lib/membership-provisioning', () => ({
   ensureRealmMembership: vi.fn(),
 }))
 

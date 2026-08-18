@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { describe, expect, it, vi } from 'vitest'
-import { recordPermissionChange } from '@/lib/audit'
+import { recordPermissionChange } from '@/lib/audit-write'
 
 vi.mock('@/lib/db', () => ({
   getDb: vi.fn(),

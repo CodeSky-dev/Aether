@@ -1,18 +1,10 @@
 // @aether/web · Better-Auth 到 Aether membership 的 JIT 镜像
-'use server'
-
-import {
-  findOrganizationMemberRoles,
-} from '@aether/auth'
-import {
-  members,
-  realms,
-  realmGuard,
-} from '@aether/db'
+import { findOrganizationMemberRoles } from '@aether/auth'
+import { members, realms, realmGuard } from '@aether/db'
 import type { ActorType } from '@aether/types'
 import { and, eq } from 'drizzle-orm'
 import { getDb } from '@/lib/db'
-import { recordPermissionChange } from '@/lib/audit'
+import { recordPermissionChange } from '@/lib/audit-write'
 import { isPlaceholderOrganization } from '@/lib/membership-utils'
 
 const ROLE_PRIORITY = ['owner', 'admin', 'member'] as const

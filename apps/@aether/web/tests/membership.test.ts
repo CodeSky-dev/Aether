@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ensureRealmMembership } from '@/lib/membership'
+import { ensureRealmMembership } from '@/lib/membership-provisioning'
 import { findOrganizationMemberRoles } from '@aether/auth'
 import { getDb } from '@/lib/db'
 
@@ -11,7 +11,7 @@ vi.mock('@/lib/db', () => ({
   getDb: vi.fn(),
 }))
 
-vi.mock('@/lib/audit', () => ({
+vi.mock('@/lib/audit-write', () => ({
   recordPermissionChange: vi.fn(),
 }))
 

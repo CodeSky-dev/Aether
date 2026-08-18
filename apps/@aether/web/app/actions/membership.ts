@@ -11,7 +11,7 @@ import { realms } from '@aether/db'
 import { eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { getDb } from '@/lib/db'
-import { ensureRealmMembership } from '@/lib/membership'
+import { ensureRealmMembership } from '@/lib/membership-provisioning'
 import { isPlaceholderOrganization } from '@/lib/membership-utils'
 import {
   requireEntitlement,
