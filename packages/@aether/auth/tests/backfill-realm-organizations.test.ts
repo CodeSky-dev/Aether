@@ -42,6 +42,7 @@ describe('backfill realm organization logic', () => {
     const findUserIdByEmail = vi.fn().mockResolvedValue('user-1')
     const dependencies: BackfillDependencies = {
       findUserIdByEmail,
+      findReusableOrganizationId: vi.fn().mockResolvedValue(null),
       createOrganization: vi.fn(),
       applyRealm: vi.fn(),
     }
@@ -62,6 +63,7 @@ describe('backfill realm organization logic', () => {
     const applyRealm = vi.fn()
     const dependencies: BackfillDependencies = {
       findUserIdByEmail,
+      findReusableOrganizationId: vi.fn().mockResolvedValue(null),
       createOrganization,
       applyRealm,
     }
@@ -85,6 +87,7 @@ describe('backfill realm organization logic', () => {
         .fn()
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce('user-2'),
+      findReusableOrganizationId: vi.fn().mockResolvedValue(null),
       createOrganization,
       applyRealm: vi.fn(),
     }
@@ -111,6 +114,7 @@ describe('backfill realm organization logic', () => {
   it('counts realm overrides that match no Realm as failures', async () => {
     const dependencies: BackfillDependencies = {
       findUserIdByEmail: vi.fn(),
+      findReusableOrganizationId: vi.fn().mockResolvedValue(null),
       createOrganization: vi.fn(),
       applyRealm: vi.fn(),
     }
@@ -124,5 +128,56 @@ describe('backfill realm organization logic', () => {
     expect(summary.failureReasons).toContain(
       'typo-alpha: --realm override did not match any Realm',
     )
+  })
+
+  it('reuses an orphan organization left by a previously failed apply', async () => {
+    const createOrganization = vi.fn()
+    const applyRealm = vi.fn()
+    const dependencies: BackfillDependencies = {
+      findUserIdByEmail: vi.fn().mockResolvedValue('user-1'),
+      findReusableOrganizationId: vi.fn().mockResolvedValue('org-orphan'),
+      createOrganization,
+      applyRealm,
+    }
+
+    const summary = await runBackfill([realms[0]!], dependencies, {
+      apply: true,
+      ownerEmail: 'owner@example.com',
+      realmOwners: new Map(),
+    })
+
+    expect(summary.processed).toBe(1)
+    expect(createOrganization).not.toHaveBeenCalled()
+    expect(applyRealm).toHaveBeenCalledWith({
+      realm: realms[0],
+      organizationId: 'org-orphan',
+      ownerUserId: 'user-1',
+    })
+  })
+
+  it('records reuse lookup rejections as failures without creating organizations', async () => {
+    const createOrganization = vi.fn()
+    const applyRealm = vi.fn()
+    const dependencies: BackfillDependencies = {
+      findUserIdByEmail: vi.fn().mockResolvedValue('user-1'),
+      findReusableOrganizationId: vi
+        .fn()
+        .mockRejectedValue(
+          new Error('organization slug alpha is already bound to Realm beta'),
+        ),
+      createOrganization,
+      applyRealm,
+    }
+
+    const summary = await runBackfill([realms[0]!], dependencies, {
+      apply: true,
+      ownerEmail: 'owner@example.com',
+      realmOwners: new Map(),
+    })
+
+    expect(summary.failed).toBe(1)
+    expect(summary.failureReasons[0]).toContain('already bound to Realm beta')
+    expect(createOrganization).not.toHaveBeenCalled()
+    expect(applyRealm).not.toHaveBeenCalled()
   })
 })

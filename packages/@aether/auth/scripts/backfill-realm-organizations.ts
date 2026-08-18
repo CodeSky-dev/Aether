@@ -2,7 +2,7 @@
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 import { drizzle } from 'drizzle-orm/postgres-js'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import postgres from 'postgres'
 import {
   auditLog,
@@ -15,7 +15,7 @@ import {
 } from '../src/schema.js'
 import { createAuth } from '../src/instance.js'
 import { createRealmOrganization, isPlaceholderOrganization } from '../src/organization.js'
-import { user } from '../src/schema.js'
+import { member, organization, user } from '../src/schema.js'
 import { createHash } from 'node:crypto'
 
 export interface BackfillArgs {
@@ -41,6 +41,16 @@ export interface BackfillSummary {
 
 export interface BackfillDependencies {
   findUserIdByEmail(email: string): Promise<string | null>
+  /**
+   * 查找可复用的同名 slug organization：
+   * 上一轮在建 organization 之后、写 Realm 绑定之前失败会留下孤儿 organization，
+   * 而 organization.slug 唯一，重跑必然撞约束。复用孤儿使回填可重试。
+   * 已被其它 Realm 绑定时抛错，避免把两个 Realm 指向同一 organization。
+   */
+  findReusableOrganizationId(input: {
+    slug: string
+    ownerUserId: string
+  }): Promise<string | null>
   createOrganization(input: {
     name: string
     slug: string
@@ -142,14 +152,23 @@ export async function runBackfill(
     }
 
     try {
-      const organization = await dependencies.createOrganization({
-        name: realm.name,
-        slug: realm.slug,
-        ownerUserId,
-      })
+      const reusableOrganizationId =
+        await dependencies.findReusableOrganizationId({
+          slug: realm.slug,
+          ownerUserId,
+        })
+      const organizationId =
+        reusableOrganizationId ??
+        (
+          await dependencies.createOrganization({
+            name: realm.name,
+            slug: realm.slug,
+            ownerUserId,
+          })
+        ).id
       await dependencies.applyRealm({
         realm,
-        organizationId: organization.id,
+        organizationId,
         ownerUserId,
       })
       summary.processed += 1
@@ -226,6 +245,42 @@ function createDependencies(
         .where(eq(user.email, email))
         .limit(1)
       return row?.id ?? null
+    },
+    async findReusableOrganizationId({ slug, ownerUserId }) {
+      const [existing] = await db
+        .select({ id: organization.id })
+        .from(organization)
+        .where(eq(organization.slug, slug))
+        .limit(1)
+      if (!existing) return null
+
+      const [boundRealm] = await db
+        .select({ slug: realms.slug })
+        .from(realms)
+        .where(eq(realms.auth_org_id, existing.id))
+        .limit(1)
+      if (boundRealm) {
+        throw new Error(
+          `organization slug ${slug} is already bound to Realm ${boundRealm.slug}`,
+        )
+      }
+
+      const [ownerMember] = await db
+        .select({ userId: member.userId })
+        .from(member)
+        .where(
+          and(
+            eq(member.organizationId, existing.id),
+            eq(member.userId, ownerUserId),
+          ),
+        )
+        .limit(1)
+      if (!ownerMember) {
+        throw new Error(
+          `organization slug ${slug} exists without the requested owner; resolve it manually`,
+        )
+      }
+      return existing.id
     },
     createOrganization(input) {
       return createRealmOrganization(auth, input)

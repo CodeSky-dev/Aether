@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { AuthInstance } from '../src/instance.js'
 import {
   acceptOrganizationInvitation,
+  cancelOrganizationInvitation,
   createRealmOrganization,
   findOrganizationMemberRoles,
   inviteToOrganization,
@@ -42,8 +43,16 @@ describe('organization wrappers', () => {
     const acceptInvitation = vi.fn().mockResolvedValue({
       invitation: { organizationId: 'org-1' },
     })
+    const cancelInvitation = vi.fn().mockResolvedValue({
+      invitation: { id: 'invite-1' },
+    })
     const auth = {
-      api: { createInvitation, listInvitations, acceptInvitation },
+      api: {
+        createInvitation,
+        listInvitations,
+        acceptInvitation,
+        cancelInvitation,
+      },
     } as unknown as AuthInstance
 
     await expect(
@@ -63,6 +72,9 @@ describe('organization wrappers', () => {
     await acceptOrganizationInvitation(auth, headers, {
       invitationId: 'invite-1',
     })
+    await cancelOrganizationInvitation(auth, headers, {
+      invitationId: 'invite-1',
+    })
 
     expect(createInvitation).toHaveBeenCalledWith({
       headers,
@@ -77,6 +89,10 @@ describe('organization wrappers', () => {
       query: { organizationId: 'org-1' },
     })
     expect(acceptInvitation).toHaveBeenCalledWith({
+      headers,
+      body: { invitationId: 'invite-1' },
+    })
+    expect(cancelInvitation).toHaveBeenCalledWith({
       headers,
       body: { invitationId: 'invite-1' },
     })
