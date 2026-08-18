@@ -6,6 +6,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { toNextJsHandler } from 'better-auth/next-js'
 import { organization } from 'better-auth/plugins'
 import { realmAccessControl, realmRoles } from './permissions.js'
+import { betterAuthSchema } from './schema.js'
 export interface CreateAuthOptions {
   /** 已配置 schema 的 Drizzle pg 实例（含 @aether/auth schema 与 @aether/db schema）。 */
   db: Parameters<typeof drizzleAdapter>[0]
@@ -20,6 +21,7 @@ export function createAuth(options: CreateAuthOptions) {
   return betterAuth({
     database: drizzleAdapter(db, {
       provider: 'pg',
+      schema: betterAuthSchema,
     }),
     baseURL,
     secret,
