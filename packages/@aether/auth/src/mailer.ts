@@ -68,7 +68,8 @@ function createResendMailer(): Mailer {
 }
 
 export function resolveMailer(): Mailer {
-  const provider = process.env.AETHER_MAIL_PROVIDER ?? 'console'
+  // 空串按未设置处理：托管平台上环境变量常以空值存在，不应让邀请全部失败。
+  const provider = process.env.AETHER_MAIL_PROVIDER?.trim() || 'console'
   if (provider === 'console') return createConsoleMailer()
   if (provider === 'resend') return createResendMailer()
   throw new Error(`Unknown AETHER_MAIL_PROVIDER: ${provider}`)

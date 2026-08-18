@@ -26,6 +26,17 @@ describe('resolveMailer', () => {
     expect(log.mock.calls.flat().join(' ')).not.toContain('resend-secret')
   })
 
+  it('treats blank and whitespace-only providers as console', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    for (const value of ['', '   ']) {
+      vi.stubEnv('AETHER_MAIL_PROVIDER', value)
+      await resolveMailer().sendInvitation(invitation)
+    }
+
+    expect(log).toHaveBeenCalledTimes(2)
+  })
+
   it('posts invitation details to Resend', async () => {
     vi.stubEnv('AETHER_MAIL_PROVIDER', 'resend')
     vi.stubEnv('RESEND_API_KEY', 'resend-secret')

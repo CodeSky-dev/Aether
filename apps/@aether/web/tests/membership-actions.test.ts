@@ -12,6 +12,7 @@ import {
 } from '@/lib/auth-guard'
 import { tryGetAuth } from '@/lib/auth'
 import { ensureRealmMembership } from '@/lib/membership-provisioning'
+import { requireRealmRole } from '@/lib/membership-guard'
 import {
   acceptRealmInvitation,
   inviteRealmMember,
@@ -47,6 +48,14 @@ vi.mock('@/lib/membership-provisioning', () => ({
 vi.mock('@/lib/membership-utils', () => ({
   isPlaceholderOrganization: (id: string) =>
     id.startsWith('org-placeholder-'),
+  UNBOUND_REALM_ORGANIZATION_MESSAGE:
+    'Realm is not bound to a Better-Auth organization; rebuild or bind the Realm first',
+}))
+
+vi.mock('@/lib/membership-guard', () => ({
+  MANAGE_MEMBER_ROLES: ['owner', 'admin'],
+  READ_MEMBER_ROLES: ['owner', 'admin', 'member'],
+  requireRealmRole: vi.fn(),
 }))
 
 vi.mock('next/headers', () => ({
@@ -60,6 +69,7 @@ const mockedTryGetAuth = vi.mocked(tryGetAuth)
 const mockedInvite = vi.mocked(inviteToOrganization)
 const mockedListInvitations = vi.mocked(listOrganizationInvitations)
 const mockedCancelInvitation = vi.mocked(cancelOrganizationInvitation)
+const mockedRequireRealmRole = vi.mocked(requireRealmRole)
 
 function mockRealm(authOrgId: string) {
   mockedGetDb.mockReturnValue({
@@ -81,6 +91,7 @@ describe('membership actions', () => {
       actorType: 'human',
       actorId: 'user-1',
     })
+    mockedRequireRealmRole.mockResolvedValue('admin')
   })
 
   it('rejects unsupported invitation roles', async () => {
@@ -149,6 +160,26 @@ describe('membership actions', () => {
       resource: 'realm',
       action: 'manage_member',
     })
+    expect(mockedRequireRealmRole).toHaveBeenCalledWith(
+      'realm-1',
+      { actorType: 'human', actorId: 'user-1' },
+      ['owner', 'admin'],
+    )
+  })
+
+  it('rejects management when the Realm role guard denies the actor', async () => {
+    mockedRequireRealmRole.mockRejectedValue(
+      new Error('Realm membership does not permit this operation'),
+    )
+
+    await expect(
+      inviteRealmMember({
+        realmId: 'realm-1',
+        email: 'member@example.com',
+        role: 'member',
+      }),
+    ).rejects.toThrow('does not permit this operation')
+    expect(mockedInvite).not.toHaveBeenCalled()
   })
 
   it('accepts with the session and mirrors the resulting organization', async () => {
@@ -194,8 +225,10 @@ describe('membership actions', () => {
       })),
     } as never)
 
+    mockedRequireRealmRole.mockResolvedValue('owner')
+
     await expect(listRealmMembers({ realmId: 'realm-1' })).resolves.toMatchObject({
-      currentActorRole: 'admin',
+      currentActorRole: 'owner',
       members: [{ id: 'member-1', actor_id: 'user-1' }],
     })
     expect(mockedRequireEntitlement).toHaveBeenCalledWith('realm-1', {

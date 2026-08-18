@@ -10,6 +10,7 @@ import RealmMemberList from '@/components/realm-member-list'
 import NavShell from '@/components/nav-shell'
 import PageHeader from '@/components/page-header'
 import { listRealms } from '@/lib/realms'
+import { UNBOUND_REALM_ORGANIZATION_MESSAGE } from '@/lib/membership-utils'
 import { notFound } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
@@ -24,7 +25,7 @@ function errorMessage(error: unknown): string {
 
 function renderLoadError(error: unknown) {
   const message = errorMessage(error)
-  if (message.includes('not bound to a Better-Auth organization')) {
+  if (message === UNBOUND_REALM_ORGANIZATION_MESSAGE) {
     return 'Realm 尚未绑定真实 organization，请先运行回填脚本 backfill:realm-orgs。'
   }
   return message

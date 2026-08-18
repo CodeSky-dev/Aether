@@ -8,7 +8,7 @@ import { useState } from 'react'
 
 interface InviteRealmMemberFormProps {
   realmId: string
-  currentActorRole: string | null
+  currentActorRole: string
 }
 
 const ROLES = ['owner', 'admin', 'member'] as const
@@ -43,18 +43,13 @@ export default function InviteRealmMemberForm({
     }
   }
 
-  if (!canInvite && currentActorRole !== null) return null
+  if (!canInvite) return null
 
   return (
     <section className="rounded-lg bg-neutral-1 p-5 ring-1 ring-border">
       <p className="text-caption-10 uppercase tracking-[1.5px] text-neutral-6">
         邀请成员
       </p>
-      {currentActorRole === null && (
-        <p className="mt-2 text-label-12 text-neutral-6">
-          当前主体尚未显示 Realm membership；提交后仍会由服务端再次校验权限。
-        </p>
-      )}
       <form
         onSubmit={(event) => {
           void handleSubmit(event)
