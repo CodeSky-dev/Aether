@@ -5,6 +5,8 @@ import { getDb } from '@/lib/db'
 
 vi.mock('@aether/auth', () => ({
   findOrganizationMemberRoles: vi.fn(),
+  isPlaceholderOrganization: (id: string) =>
+    id.startsWith('org-placeholder-'),
 }))
 
 vi.mock('@/lib/db', () => ({
